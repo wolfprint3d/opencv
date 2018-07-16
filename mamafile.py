@@ -33,9 +33,9 @@ class opencv(mama.BuildTarget):
         if self.config.ios:
             self.enable_ninja_build = False # opencv for ios blows up with Ninja
 
-    def package(self):
-        # libpng builds its stuff into `{build}/lib`
-        #self.export_libs('lib', ['.lib', '.a'])
-        # export installed include path from build dir
-        #self.export_include('include', build_dir=True)
-        pass
+    #def package(self):
+    #    # libpng builds its stuff into `{build}/lib`
+    #    #self.export_libs('lib', ['.lib', '.a'])
+    #    # export installed include path from build dir
+    #    #self.export_include('include', build_dir=True)
+    #    pass
