@@ -34,6 +34,6 @@ class opencv(mama.BuildTarget):
             self.enable_ninja_build = False # opencv for ios blows up with Ninja
 
     def package(self):
-       self.export_libs('lib')
+       self.export_libs('lib', order=['xphoto','calib3d','features2d','flann', 'objdetect', 'imgproc', 'imgcodecs', 'highgui', 'video', 'videoio', 'core'])
        self.export_libs('3rdparty/lib')
        self.export_include('include', build_dir=True)
