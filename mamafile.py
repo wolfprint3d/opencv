@@ -16,7 +16,7 @@ class opencv(mama.BuildTarget):
             "BUILD_opencv_apps=OFF",      "BUILD_opencv_calib3d=ON",   "BUILD_opencv_core=ON",
             "BUILD_opencv_features2d=ON", "BUILD_opencv_flann=ON",     "BUILD_opencv_highgui=ON",
             "BUILD_opencv_imgcodecs=ON",  "BUILD_opencv_imgproc=ON",   "BUILD_opencv_ml=ON",
-            "BUILD_opencv_objdetect=ON",  "BUILD_opencv_photo=OFF",    "BUILD_opencv_shape=OFF",
+            "BUILD_opencv_objdetect=ON",  "BUILD_opencv_photo=ON",    "BUILD_opencv_shape=OFF",
             "BUILD_opencv_stitching=OFF", "BUILD_opencv_superres=OFF", "BUILD_opencv_ts=OFF",
             "BUILD_opencv_video=ON",      "BUILD_opencv_videoio=ON",   "BUILD_opencv_videostab=OFF",
             "BUILD_opencv_nonfree=OFF", "BUILD_SHARED_LIBS=OFF", "BUILD_opencv_java=OFF", 
@@ -34,6 +34,6 @@ class opencv(mama.BuildTarget):
             self.enable_ninja_build = False # opencv for ios blows up with Ninja
 
     def package(self):
-       self.export_libs('lib', order=['xphoto','calib3d','features2d','flann', 'objdetect', 'imgcodecs', 'imgproc', 'highgui', 'video', 'videoio', 'core'])
+       self.export_libs('lib', order=['xphoto','calib3d','features2d','flann', 'objdetect', 'photo', 'imgcodecs', 'imgproc', 'highgui', 'video', 'videoio', 'core'])
        self.export_libs('3rdparty/lib')
        self.export_include('include', build_dir=True)
