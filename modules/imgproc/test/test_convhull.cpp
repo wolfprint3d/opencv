@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 /*static int
 cvTsPointConvexPolygon( CvPoint2D32f pt, CvPoint2D32f* v, int n )
@@ -1058,7 +1057,7 @@ void CV_MinCircleTest2::run_func()
     Point2f calcCenter;
     float calcRadius;
     minEnclosingCircle(pts, calcCenter, calcRadius);
-    delta = (float)norm(calcCenter - center) + abs(calcRadius - radius);
+    delta = (float)cv::norm(calcCenter - center) + abs(calcRadius - radius);
 }
 
 int CV_MinCircleTest2::validate_test_results( int test_case_idx )
@@ -1585,7 +1584,7 @@ int CV_FitLineTest::prepare_test_case( int test_case_idx )
 void CV_FitLineTest::run_func()
 {
     if(!test_cpp)
-        cvFitLine( points, dist_type, 0, reps, aeps, line );
+        cvFitLine( points, dist_type, 0, reps, aeps, line.data());
     else if(dims == 2)
         cv::fitLine(cv::cvarrToMat(points), (cv::Vec4f&)line[0], dist_type, 0, reps, aeps);
     else
@@ -2027,4 +2026,5 @@ INSTANTIATE_TEST_CASE_P(Imgproc, ConvexityDefects_regression_5908,
                 testing::Values(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
         ));
 
+}} // namespace
 /* End of file. */

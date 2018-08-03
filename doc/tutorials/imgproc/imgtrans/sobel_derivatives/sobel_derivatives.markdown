@@ -87,7 +87,7 @@ Assuming that the image to be operated is \f$I\f$:
     When the size of the kernel is `3`, the Sobel kernel shown above may produce noticeable
     inaccuracies (after all, Sobel is only an approximation of the derivative). OpenCV addresses
     this inaccuracy for kernels of size 3 by using the **Scharr()** function. This is as fast
-    but more accurate than the standar Sobel function. It implements the following kernels:
+    but more accurate than the standard Sobel function. It implements the following kernels:
     \f[G_{x} = \begin{bmatrix}
     -3 & 0 & +3  \\
     -10 & 0 & +10  \\
@@ -114,19 +114,19 @@ Code
 
 @add_toggle_cpp
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp)
+[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp)
 @include samples/cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp
 @end_toggle
 
 @add_toggle_java
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/ImgTrans/SobelDemo/SobelDemo.java)
+[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/ImgTrans/SobelDemo/SobelDemo.java)
 @include samples/java/tutorial_code/ImgTrans/SobelDemo/SobelDemo.java
 @end_toggle
 
 @add_toggle_python
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/ImgTrans/SobelDemo/sobel_demo.py)
+[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/ImgTrans/SobelDemo/sobel_demo.py)
 @include samples/python/tutorial_code/ImgTrans/SobelDemo/sobel_demo.py
 @end_toggle
 

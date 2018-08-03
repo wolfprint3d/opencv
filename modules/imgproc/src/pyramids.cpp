@@ -860,10 +860,10 @@ pyrDown_( const Mat& _src, Mat& _dst, int borderType )
     int cn = _src.channels();
     int bufstep = (int)alignSize(dsize.width*cn, 16);
     AutoBuffer<WT> _buf(bufstep*PD_SZ + 16);
-    WT* buf = alignPtr((WT*)_buf, 16);
+    WT* buf = alignPtr((WT*)_buf.data(), 16);
     int tabL[CV_CN_MAX*(PD_SZ+2)], tabR[CV_CN_MAX*(PD_SZ+2)];
     AutoBuffer<int> _tabM(dsize.width*cn);
-    int* tabM = _tabM;
+    int* tabM = _tabM.data();
     WT* rows[PD_SZ];
     CastOp castOp;
     VecOp vecOp;
@@ -984,9 +984,9 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
     int cn = _src.channels();
     int bufstep = (int)alignSize((dsize.width+1)*cn, 16);
     AutoBuffer<WT> _buf(bufstep*PU_SZ + 16);
-    WT* buf = alignPtr((WT*)_buf, 16);
+    WT* buf = alignPtr((WT*)_buf.data(), 16);
     AutoBuffer<int> _dtab(ssize.width*cn);
-    int* dtab = _dtab;
+    int* dtab = _dtab.data();
     WT* rows[PU_SZ];
     T* dsts[2];
     CastOp castOp;
@@ -1352,6 +1352,8 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
     _dst.create( dsz, src.type() );
     Mat dst = _dst.getMat();
     int depth = src.depth();
+
+    CALL_HAL(pyrDown, cv_hal_pyrdown, src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(), borderType);
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if(borderType == BORDER_DEFAULT && tegra::useTegra() && tegra::pyrDown(src, dst))

@@ -438,6 +438,8 @@ public:
      * @param name Name of the written object
      * @param val Value of the written object
      */
+    CV_WRAP void write(const String& name, int val);
+    /// @overload
     CV_WRAP void write(const String& name, double val);
     /// @overload
     CV_WRAP void write(const String& name, const String& val);
@@ -851,7 +853,9 @@ namespace internal
             size_t remaining = it->remaining;
             size_t cn = DataType<_Tp>::channels;
             int _fmt = traits::SafeFmt<_Tp>::fmt;
+            CV_Assert((_fmt >> 8) < 9);
             char fmt[] = { (char)((_fmt >> 8)+'1'), (char)_fmt, '\0' };
+            CV_Assert((remaining % cn) == 0);
             size_t remaining1 = remaining / cn;
             count = count < remaining1 ? count : remaining1;
             vec.resize(count);

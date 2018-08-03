@@ -46,20 +46,7 @@ gen_template_func_body = Template("""$code_decl
     }
 """)
 
-py_major_version = sys.version_info[0]
-if __name__ == "__main__":
-    if len(sys.argv) > 3:
-        if sys.argv[3] == 'PYTHON3':
-            py_major_version = 3
-        elif sys.argv[3] == 'PYTHON2':
-            py_major_version = 2
-        else:
-            raise Exception('Incorrect argument: expected PYTHON2 or PYTHON3, received: ' + sys.argv[3])
-if py_major_version >= 3:
-    head_init_str = "PyVarObject_HEAD_INIT(&PyType_Type, 0)"
-else:
-    head_init_str = """PyObject_HEAD_INIT(&PyType_Type)
-0,"""
+head_init_str = "CV_PYTHON_TYPE_HEAD_INIT()"
 
 gen_template_simple_type_decl = Template("""
 struct pyopencv_${name}_t
@@ -612,13 +599,9 @@ class FuncInfo(object):
         # Convert unicode chars to xml representation, but keep as string instead of bytes
         full_docstring = full_docstring.encode('ascii', errors='xmlcharrefreplace').decode()
 
-        flags = ["METH_VARARGS", "METH_KEYWORDS"]
-        if self.isclassmethod:
-            flags.append("METH_CLASS")
-
-        return Template('    {"$py_funcname", (PyCFunction)$wrap_funcname, $flags, "$py_docstring"},\n'
+        return Template('    {"$py_funcname", CV_PY_FN_WITH_KW_($wrap_funcname, $flags), "$py_docstring"},\n'
                         ).substitute(py_funcname = self.variants[0].wname, wrap_funcname=self.get_wrapper_name(),
-                                     flags = " | ".join(flags), py_docstring = full_docstring)
+                                     flags = 'METH_CLASS' if self.isclassmethod else '0', py_docstring = full_docstring)
 
     def gen_code(self, codegen):
         all_classes = codegen.classes

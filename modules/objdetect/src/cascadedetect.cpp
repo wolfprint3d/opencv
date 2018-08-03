@@ -511,7 +511,7 @@ bool FeatureEvaluator::setImage( InputArray _image, const std::vector<float>& _s
         {
             const ScaleData& s = scaleData->at(i);
             UMat dst(urbuf, Rect(0, 0, s.szi.width - 1, s.szi.height - 1));
-            resize(_image, dst, dst.size(), 1. / s.scale, 1. / s.scale, INTER_LINEAR);
+            resize(_image, dst, dst.size(), 1. / s.scale, 1. / s.scale, INTER_LINEAR_EXACT);
             computeChannels((int)i, dst);
         }
         sbufFlag = USBUF_VALID;
@@ -526,7 +526,7 @@ bool FeatureEvaluator::setImage( InputArray _image, const std::vector<float>& _s
         {
             const ScaleData& s = scaleData->at(i);
             Mat dst(s.szi.height - 1, s.szi.width - 1, CV_8U, rbuf.ptr());
-            resize(image, dst, dst.size(), 1. / s.scale, 1. / s.scale, INTER_LINEAR);
+            resize(image, dst, dst.size(), 1. / s.scale, 1. / s.scale, INTER_LINEAR_EXACT);
             computeChannels((int)i, dst);
         }
         sbufFlag = SBUF_VALID;
@@ -997,7 +997,7 @@ public:
         mtx = _mtx;
     }
 
-    void operator()(const Range& range) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION()
 
@@ -1346,7 +1346,7 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
 
         size_t i, nscales = scales.size();
         cv::AutoBuffer<int> stripeSizeBuf(nscales);
-        int* stripeSizes = stripeSizeBuf;
+        int* stripeSizes = stripeSizeBuf.data();
         const FeatureEvaluator::ScaleData* s = &featureEvaluator->getScaleData(0);
         Size szw = s->getWorkingSize(data.origWinSize);
         int nstripes = cvCeil(szw.width/32.);

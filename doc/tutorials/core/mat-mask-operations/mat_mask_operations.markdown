@@ -33,7 +33,7 @@ Code
 
 @add_toggle_cpp
 You can download this source code from [here
-](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp) or look in the
+](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp) or look in the
 OpenCV source code libraries sample directory at
 `samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp`.
 @include samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp
@@ -41,7 +41,7 @@ OpenCV source code libraries sample directory at
 
 @add_toggle_java
 You can download this source code from [here
-](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java) or look in the
+](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java) or look in the
 OpenCV source code libraries sample directory at
 `samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java`.
 @include samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java
@@ -49,7 +49,7 @@ OpenCV source code libraries sample directory at
 
 @add_toggle_python
 You can download this source code from [here
-](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py) or look in the
+](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py) or look in the
 OpenCV source code libraries sample directory at
 `samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py`.
 @include samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py
@@ -82,7 +82,7 @@ At first we make sure that the input images data in unsigned 8 bit format.
 
 At first we make sure that the input images data in unsigned 8 bit format.
 @code{.py}
-my_image = cv2.cvtColor(my_image, cv2.CV_8U)
+my_image = cv.cvtColor(my_image, cv.CV_8U)
 @endcode
 
 @end_toggle

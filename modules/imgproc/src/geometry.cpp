@@ -279,7 +279,7 @@ static int areaSign( Point2f a, Point2f b, Point2f c )
 }
 
 //---------------------------------------------------------------------
-// Returns true iff point c lies on the closed segement ab.
+// Returns true iff point c lies on the closed segment ab.
 // Assumes it is already known that abc are collinear.
 //---------------------------------------------------------------------
 static bool between( Point2f a, Point2f b, Point2f c )
@@ -524,7 +524,7 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
     }
 
     AutoBuffer<Point2f> _result(n*2 + m*2 + 1);
-    Point2f *fp1 = _result, *fp2 = fp1 + n;
+    Point2f *fp1 = _result.data(), *fp2 = fp1 + n;
     Point2f* result = fp2 + m;
     int orientation = 0;
 

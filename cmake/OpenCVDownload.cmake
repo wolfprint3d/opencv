@@ -20,23 +20,26 @@ if(DEFINED ENV{OPENCV_DOWNLOAD_PATH})
 endif()
 set(OPENCV_DOWNLOAD_PATH "${OpenCV_SOURCE_DIR}/.cache" CACHE PATH "${HELP_OPENCV_DOWNLOAD_PATH}")
 set(OPENCV_DOWNLOAD_LOG "${OpenCV_BINARY_DIR}/CMakeDownloadLog.txt")
+set(OPENCV_DOWNLOAD_WITH_CURL "${OpenCV_BINARY_DIR}/download_with_curl.sh")
+set(OPENCV_DOWNLOAD_WITH_WGET "${OpenCV_BINARY_DIR}/download_with_wget.sh")
 
-# Init download cache directory and log file
+# Init download cache directory and log file and helper scripts
 if(NOT EXISTS "${OPENCV_DOWNLOAD_PATH}")
   file(MAKE_DIRECTORY ${OPENCV_DOWNLOAD_PATH})
 endif()
 if(NOT EXISTS "${OPENCV_DOWNLOAD_PATH}/.gitignore")
   file(WRITE "${OPENCV_DOWNLOAD_PATH}/.gitignore" "*\n")
 endif()
-file(WRITE "${OPENCV_DOWNLOAD_LOG}" "use_cache \"${OPENCV_DOWNLOAD_PATH}\"\n")
-
+file(WRITE "${OPENCV_DOWNLOAD_LOG}" "#use_cache \"${OPENCV_DOWNLOAD_PATH}\"\n")
+file(REMOVE "${OPENCV_DOWNLOAD_WITH_CURL}")
+file(REMOVE "${OPENCV_DOWNLOAD_WITH_WGET}")
 
 function(ocv_download)
   cmake_parse_arguments(DL "UNPACK;RELATIVE_URL" "FILENAME;HASH;DESTINATION_DIR;ID;STATUS" "URL" ${ARGN})
 
-  macro(ocv_download_log)
+  function(ocv_download_log)
     file(APPEND "${OPENCV_DOWNLOAD_LOG}" "${ARGN}\n")
-  endmacro()
+  endfunction()
 
   ocv_assert(DL_FILENAME)
   ocv_assert(DL_HASH)
@@ -103,7 +106,7 @@ function(ocv_download)
   endif()
 
   # Log all calls to file
-  ocv_download_log("do_${mode} \"${DL_FILENAME}\" \"${DL_HASH}\" \"${DL_URL}\" \"${DL_DESTINATION_DIR}\"")
+  ocv_download_log("#do_${mode} \"${DL_FILENAME}\" \"${DL_HASH}\" \"${DL_URL}\" \"${DL_DESTINATION_DIR}\"")
   # ... and to console
   set(__msg_prefix "")
   if(DL_ID)
@@ -156,10 +159,12 @@ function(ocv_download)
          TIMEOUT 600
          STATUS status
          LOG __log)
-    string(LENGTH "${__log}" __log_length)
-    if(__log_length LESS 65536)
-      string(REPLACE "\n" "\n# " __log "${__log}")
-      ocv_download_log("# ${__log}\n")
+    if(NOT OPENCV_SKIP_FILE_DOWNLOAD_DUMP)  # workaround problem with old CMake versions: "Invalid escape sequence"
+      string(LENGTH "${__log}" __log_length)
+      if(__log_length LESS 65536)
+        string(REPLACE "\n" "\n# " __log "${__log}")
+        ocv_download_log("# ${__log}\n")
+      endif()
     endif()
     if(NOT status EQUAL 0)
       set(msg_level FATAL_ERROR)
@@ -189,6 +194,9 @@ function(ocv_download)
 For details please refer to the download log file:
 ${OPENCV_DOWNLOAD_LOG}
 ")
+      # write helper scripts for failed downloads
+      file(APPEND "${OPENCV_DOWNLOAD_WITH_CURL}" "curl --output \"${CACHE_CANDIDATE}\" \"${DL_URL}\"\n")
+      file(APPEND "${OPENCV_DOWNLOAD_WITH_WGET}" "wget -O \"${CACHE_CANDIDATE}\" \"${DL_URL}\"\n")
       return()
     endif()
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import sys, re, os.path, cgi, stat, math
 from optparse import OptionParser
 from color import getColorizer, dummyColorizer
@@ -47,7 +48,7 @@ class table(object):
         if len(self.rows) - 1 == self.ridx:
             self.rows.append(tblRow(len(self.columns), properties))
         else:
-            self.rows[ridx + 1].props = properties
+            self.rows[self.ridx + 1].props = properties
         self.ridx += 1
         return self.rows[self.ridx]
 
@@ -205,6 +206,8 @@ class table(object):
         cell.width = len(max(cell.text, key = lambda line: len(line)))
 
     def reformatTextValue(self, value):
+        if sys.version_info > (3,):  # PY3 fix
+            unicode = str
         if isinstance(value, str):
             vstr = value
         elif isinstance(value, unicode):
@@ -716,17 +719,20 @@ def formatValue(val, metric, units = None):
         if val > 0:
             return "slower"
         #return "%.4f" % val
-    return "%.3f %s" % (val, units)
+    if units:
+        return "%.3f %s" % (val, units)
+    else:
+        return "%.3f" % val
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print "Usage:\n", os.path.basename(sys.argv[0]), "<log_name>.xml"
+        print("Usage:\n", os.path.basename(sys.argv[0]), "<log_name>.xml")
         exit(0)
 
     parser = OptionParser()
     parser.add_option("-o", "--output", dest="format", help="output results in text format (can be 'txt', 'html', 'markdown' or 'auto' - default)", metavar="FMT", default="auto")
     parser.add_option("-m", "--metric", dest="metric", help="output metric", metavar="NAME", default="gmean")
-    parser.add_option("-u", "--units", dest="units", help="units for output values (s, ms (default), mks, ns or ticks)", metavar="UNITS", default="ms")
+    parser.add_option("-u", "--units", dest="units", help="units for output values (s, ms (default), us, ns or ticks)", metavar="UNITS", default="ms")
     (options, args) = parser.parse_args()
 
     options.generateHtml = detectHtmlOutputType(options.format)

@@ -1,9 +1,9 @@
-# Binary branch name: ffmpeg/master_20171009
-# Binaries were created for OpenCV: 8ac2c5d620b467d3f22802e96c88ddde6da707af
-set(FFMPEG_BINARIES_COMMIT "66b1fed06cf3510235f367f96aa26da5cb234a15")
-set(FFMPEG_FILE_HASH_BIN32 "3ae76b105113d944984b2351c61e21c6")
-set(FFMPEG_FILE_HASH_BIN64 "cf3bb5bc9d393b022ea7a42eb63e794d")
-set(FFMPEG_FILE_HASH_CMAKE "ec59008da403fb18ab3c1ed66aed583b")
+# Binaries branch name: ffmpeg/3.4_20180608
+# Binaries were created for OpenCV: f5ddbbf65937d8f44e481e4ee1082961821f5c62
+ocv_update(FFMPEG_BINARIES_COMMIT "8041bd6f5ad37045c258904ba3030bb3442e3911")
+ocv_update(FFMPEG_FILE_HASH_BIN32 "fa5a2a4e2f37defcb95bde8ed145c2b3")
+ocv_update(FFMPEG_FILE_HASH_BIN64 "2cc08fc4fef8199fe80e0f126684834f")
+ocv_update(FFMPEG_FILE_HASH_CMAKE "3b90f67f4b429e77d3da36698cef700c")
 
 function(download_win_ffmpeg script_var)
   set(${script_var} "" PARENT_SCOPE)
@@ -35,3 +35,8 @@ function(download_win_ffmpeg script_var)
     set(${script_var} "${FFMPEG_DOWNLOAD_DIR}/ffmpeg_version.cmake" PARENT_SCOPE)
   endif()
 endfunction()
+
+if(OPENCV_INSTALL_FFMPEG_DOWNLOAD_SCRIPT)
+  configure_file("${CMAKE_CURRENT_LIST_DIR}/ffmpeg-download.ps1.in" "${CMAKE_BINARY_DIR}/win-install/ffmpeg-download.ps1" @ONLY)
+  install(FILES "${CMAKE_BINARY_DIR}/win-install/ffmpeg-download.ps1" DESTINATION "." COMPONENT libs)
+endif()

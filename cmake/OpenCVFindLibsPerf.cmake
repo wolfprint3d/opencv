@@ -18,6 +18,13 @@ if(WITH_IPP)
     endif()
     ocv_include_directories(${IPP_INCLUDE_DIRS})
     list(APPEND OPENCV_LINKER_LIBS ${IPP_LIBRARIES})
+
+    # Details: #10229
+    if(ANDROID AND NOT OPENCV_SKIP_ANDROID_IPP_FIX_1)
+      set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--exclude-libs,libippicv.a -Wl,--exclude-libs,libippiw.a ${CMAKE_SHARED_LINKER_FLAGS}")
+    elseif(ANDROID AND NOT OPENCV_SKIP_ANDROID_IPP_FIX_2)
+      set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-Bsymbolic ${CMAKE_SHARED_LINKER_FLAGS}")
+    endif()
   endif()
 endif()
 
@@ -35,6 +42,12 @@ endif(WITH_IPP_A)
 # --- CUDA ---
 if(WITH_CUDA)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCUDA.cmake")
+  if(NOT HAVE_CUDA)
+    message(WARNING "OpenCV is not able to find/configure CUDA SDK (required by WITH_CUDA).
+CUDA support will be disabled in OpenCV build.
+To eliminate this warning remove WITH_CUDA=ON CMake configuration option.
+")
+  endif()
 endif(WITH_CUDA)
 
 # --- Eigen ---

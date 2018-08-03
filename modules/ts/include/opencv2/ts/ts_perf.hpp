@@ -3,7 +3,6 @@
 
 #include "opencv2/ts.hpp"
 
-#include "ts_gtest.h"
 #include "ts_ext.hpp"
 
 #include <functional>
@@ -172,7 +171,7 @@ enum ERROR_TYPE
     ERROR_RELATIVE = 1
 };
 
-class CV_EXPORTS Regression
+class Regression
 {
 public:
     static Regression& add(TestBase* test, const std::string& name, cv::InputArray array, double eps = DBL_EPSILON, ERROR_TYPE err = ERROR_ABSOLUTE);
@@ -219,7 +218,7 @@ private:
 #define SANITY_CHECK_MATCHES(array, ...) ::perf::Regression::addMatches(this, #array, array , ## __VA_ARGS__)
 #define SANITY_CHECK_NOTHING() this->setVerified()
 
-class CV_EXPORTS GpuPerf
+class GpuPerf
 {
 public:
   static bool targetDevice();
@@ -230,7 +229,7 @@ public:
 /*****************************************************************************************\
 *                            Container for performance metrics                            *
 \*****************************************************************************************/
-typedef struct CV_EXPORTS performance_metrics
+typedef struct performance_metrics
 {
     size_t bytesIn;
     size_t bytesOut;
@@ -372,7 +371,7 @@ public:
 };
 #endif
 
-class CV_EXPORTS TestBase: public ::testing::Test
+class TestBase: public ::testing::Test
 {
 public:
     TestBase();
@@ -397,8 +396,8 @@ public:
 protected:
     virtual void PerfTestBody() = 0;
 
-    virtual void SetUp();
-    virtual void TearDown();
+    virtual void SetUp() CV_OVERRIDE;
+    virtual void TearDown() CV_OVERRIDE;
 
     bool startTimer(); // bool is dummy for conditional loop
     void stopTimer();
@@ -463,7 +462,7 @@ private:
     static cv::Size getSize(cv::InputArray a);
     static void declareArray(SizeVector& sizes, cv::InputOutputArray a, WarmUpType wtype);
 
-    class CV_EXPORTS _declareHelper
+    class _declareHelper
     {
     public:
         _declareHelper& in(cv::InputOutputArray a1, WarmUpType wtype = WARMUP_READ);
@@ -507,15 +506,15 @@ typedef TestBaseWithParam<Size_MatType_t> Size_MatType;
 /*****************************************************************************************\
 *                              Print functions for googletest                             *
 \*****************************************************************************************/
-CV_EXPORTS void PrintTo(const MatType& t, std::ostream* os);
+void PrintTo(const MatType& t, std::ostream* os);
 
 } //namespace perf
 
 namespace cv
 {
 
-CV_EXPORTS void PrintTo(const String& str, ::std::ostream* os);
-CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
+void PrintTo(const String& str, ::std::ostream* os);
+void PrintTo(const Size& sz, ::std::ostream* os);
 
 } //namespace cv
 
@@ -526,6 +525,7 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
 
 #define CV__PERF_TEST_BODY_IMPL(name) \
     { \
+       CV__TEST_NAMESPACE_CHECK \
        CV__TRACE_APP_FUNCTION_NAME("PERF_TEST: " name); \
        RunPerfTestBody(); \
     }
@@ -546,17 +546,7 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
 //     EXPECT_TRUE(foo.StatusIsOK());
 //   }
 #define PERF_TEST(test_case_name, test_name)\
-    namespace PERF_PROXY_NAMESPACE_NAME_(test_case_name, test_name) {\
-     class TestBase {/*compile error for this class means that you are trying to use perf::TestBase as a fixture*/};\
-     class test_case_name : public ::perf::TestBase {\
-      public:\
-       test_case_name() {}\
-      protected:\
-       virtual void PerfTestBody();\
-     };\
-     TEST_F(test_case_name, test_name){ CV__PERF_TEST_BODY_IMPL(#test_case_name "_" #test_name); }\
-    }\
-    void PERF_PROXY_NAMESPACE_NAME_(test_case_name, test_name)::test_case_name::PerfTestBody()
+    TEST_(test_case_name, test_name, ::perf::TestBase, PerfTestBody, CV__PERF_TEST_BODY_IMPL)
 
 // Defines a performance test that uses a test fixture.
 //
@@ -647,15 +637,6 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
 #endif
 #endif
 
-#ifdef HAVE_OPENCL
-namespace cvtest { namespace ocl {
-void dumpOpenCLDevice();
-}}
-#define TEST_DUMP_OCL_INFO cvtest::ocl::dumpOpenCLDevice();
-#else
-#define TEST_DUMP_OCL_INFO
-#endif
-
 
 #define CV_PERF_TEST_MAIN_INTERNALS(modulename, impls, ...)	\
     CV_TRACE_FUNCTION(); \
@@ -664,11 +645,10 @@ void dumpOpenCLDevice();
     ::perf::TestBase::Init(std::vector<std::string>(impls, impls + sizeof impls / sizeof *impls), \
                            argc, argv); \
     ::testing::InitGoogleTest(&argc, argv); \
-    cvtest::printVersionInfo(); \
+    ::testing::UnitTest::GetInstance()->listeners().Append(new cvtest::SystemInfoCollector); \
     ::testing::Test::RecordProperty("cv_module_name", #modulename); \
     ::perf::TestBase::RecordRunParameters(); \
     __CV_TEST_EXEC_ARGS(__VA_ARGS__) \
-    TEST_DUMP_OCL_INFO \
     } \
     return RUN_ALL_TESTS();
 
@@ -706,8 +686,11 @@ namespace comparators
 {
 
 template<typename T>
-struct CV_EXPORTS RectLess_ :
-        public std::binary_function<cv::Rect_<T>, cv::Rect_<T>, bool>
+#ifdef CV_CXX11
+struct RectLess_
+#else
+struct RectLess_ : public std::binary_function<cv::Rect_<T>, cv::Rect_<T>, bool>
+#endif
 {
   bool operator()(const cv::Rect_<T>& r1, const cv::Rect_<T>& r2) const
   {
@@ -720,8 +703,11 @@ struct CV_EXPORTS RectLess_ :
 
 typedef RectLess_<int> RectLess;
 
-struct CV_EXPORTS KeypointGreater :
-        public std::binary_function<cv::KeyPoint, cv::KeyPoint, bool>
+#ifdef CV_CXX11
+struct KeypointGreater
+#else
+struct KeypointGreater : public std::binary_function<cv::KeyPoint, cv::KeyPoint, bool>
+#endif
 {
     bool operator()(const cv::KeyPoint& kp1, const cv::KeyPoint& kp2) const
     {
@@ -739,7 +725,7 @@ struct CV_EXPORTS KeypointGreater :
 
 } //namespace comparators
 
-void CV_EXPORTS sort(std::vector<cv::KeyPoint>& pts, cv::InputOutputArray descriptors);
+void sort(std::vector<cv::KeyPoint>& pts, cv::InputOutputArray descriptors);
 } //namespace perf
 
 #endif //OPENCV_TS_PERF_HPP

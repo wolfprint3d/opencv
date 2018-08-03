@@ -67,6 +67,11 @@
 #  endif
 #endif
 
+#if defined __GNUC__ && __GNUC__ >= 8
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
+
 /* these settings affect the quality of detection: change with care */
 #define CV_ADJUST_FEATURES 1
 #define CV_ADJUST_WEIGHTS  0
@@ -599,7 +604,7 @@ cvSetImagesForHaarClassifierCascade( CvHaarClassifierCascade* _cascade,
                     else
                         sum0 += hidfeature->rect[k].weight * tr.width * tr.height;
                 }
-
+                CV_Assert(area0 > 0);
                 hidfeature->rect[0].weight = (float)(-sum0/area0);
             } /* l */
         } /* j */
@@ -957,7 +962,7 @@ public:
         mtx = _mtx;
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION()
 
@@ -1137,7 +1142,7 @@ public:
         mtx = _mtx;
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION()
 
@@ -1323,7 +1328,7 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
             norm1 = cvMat( sz1.height, sz1.width, CV_32FC1, normImg ? normImg->data.ptr : 0 );
             mask1 = cvMat( sz1.height, sz1.width, CV_8UC1, temp->data.ptr );
 
-            cvResize( img, &img1, CV_INTER_LINEAR );
+            cvResize( img, &img1, cv::INTER_LINEAR_EXACT );
             cvIntegral( &img1, &sum1, &sqsum1, _tilted );
 
             int ystep = factor > 2 ? 1 : 2;
@@ -2289,5 +2294,9 @@ CvType haar_type( CV_TYPE_NAME_HAAR, icvIsHaarClassifier,
                   (CvReleaseFunc)cvReleaseHaarClassifierCascade,
                   icvReadHaarClassifier, icvWriteHaarClassifier,
                   icvCloneHaarClassifier );
+
+#if defined __GNUC__ && __GNUC__ >= 8
+#pragma GCC diagnostic pop
+#endif
 
 /* End of file. */

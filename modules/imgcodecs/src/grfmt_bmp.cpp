@@ -89,12 +89,13 @@ bool  BmpDecoder::readHeader()
     else if( !m_strm.open( m_filename ))
         return false;
 
-    try
+    CV_TRY
     {
         m_strm.skip( 10 );
         m_offset = m_strm.getDWord();
 
         int  size = m_strm.getDWord();
+        CV_Assert(size > 0); // overflow, 2Gb limit
 
         if( size >= 36 )
         {
@@ -172,9 +173,9 @@ bool  BmpDecoder::readHeader()
             }
         }
     }
-    catch(...)
+    CV_CATCH_ALL
     {
-        throw;
+        CV_RETHROW();
     }
     // in 32 bit case alpha channel is used - so require CV_8UC4 type
     m_type = iscolor ? (m_bpp == 32 ? CV_8UC4 : CV_8UC3 ) : CV_8UC1;
@@ -222,9 +223,9 @@ bool  BmpDecoder::readData( Mat& img )
         }
         _bgr.allocate(m_width*3 + 32);
     }
-    uchar *src = _src, *bgr = _bgr;
+    uchar *src = _src.data(), *bgr = _bgr.data();
 
-    try
+    CV_TRY
     {
         m_strm.setPos( m_offset );
 
@@ -264,7 +265,7 @@ bool  BmpDecoder::readData( Mat& img )
                 for(;;)
                 {
                     int code = m_strm.getWord();
-                    int len = code & 255;
+                    const int len = code & 255;
                     code >>= 8;
                     if( len != 0 ) // encoded mode
                     {
@@ -303,15 +304,12 @@ bool  BmpDecoder::readData( Mat& img )
                     else
                     {
                         int x_shift3 = (int)(line_end - data);
-                        int y_shift = m_height - y;
 
                         if( code == 2 )
                         {
                             x_shift3 = m_strm.getByte()*nch;
-                            y_shift = m_strm.getByte();
+                            m_strm.getByte();
                         }
-
-                        len = x_shift3 + ((y_shift * width3) & ((code == 0) - 1));
 
                         if( color )
                             data = FillUniColor( data, line_end, step, width3,
@@ -489,12 +487,12 @@ decode_rle8_bad: ;
             result = true;
             break;
         default:
-            CV_ErrorNoReturn(cv::Error::StsError, "Invalid/unsupported mode");
+            CV_Error(cv::Error::StsError, "Invalid/unsupported mode");
         }
     }
-    catch(...)
+    CV_CATCH_ALL
     {
-        throw;
+        CV_RETHROW();
     }
 
     return result;

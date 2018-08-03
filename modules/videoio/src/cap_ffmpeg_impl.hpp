@@ -51,7 +51,7 @@
 #define CALC_FFMPEG_VERSION(a,b,c) ( a<<16 | b<<8 | c )
 
 #if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( disable: 4244 4510 4512 4610 )
+#pragma warning( disable: 4244 4510 4610 )
 #endif
 
 #ifdef __GNUC__
@@ -83,7 +83,7 @@ extern "C" {
 #endif
 
 #if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( default: 4244 4510 4512 4610 )
+#pragma warning( default: 4244 4510 4610 )
 #endif
 
 #ifdef NDEBUG
@@ -101,7 +101,7 @@ extern "C" {
         long   tv_nsec;
     };
   #endif
-#elif defined __linux__ || defined __APPLE__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__
     #include <unistd.h>
     #include <stdio.h>
     #include <sys/types.h>
@@ -298,7 +298,7 @@ static int get_number_of_cpus(void)
     GetSystemInfo( &sysinfo );
 
     return (int)sysinfo.dwNumberOfProcessors;
-#elif defined __linux__
+#elif defined __linux__ || defined __HAIKU__
     return (int)sysconf( _SC_NPROCESSORS_ONLN );
 #elif defined __APPLE__
     int numCPU=0;
@@ -406,6 +406,29 @@ inline int _opencv_ffmpeg_av_image_get_buffer_size(enum AVPixelFormat pix_fmt, i
 #endif
 };
 
+static AVRational _opencv_ffmpeg_get_sample_aspect_ratio(AVStream *stream)
+{
+#if LIBAVUTIL_VERSION_MICRO >= 100 && LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(54, 5, 100)
+    return av_guess_sample_aspect_ratio(NULL, stream, NULL);
+#else
+    AVRational undef = {0, 1};
+
+    // stream
+    AVRational ratio = stream ? stream->sample_aspect_ratio : undef;
+    av_reduce(&ratio.num, &ratio.den, ratio.num, ratio.den, INT_MAX);
+    if (ratio.num > 0 && ratio.den > 0)
+        return ratio;
+
+    // codec
+    ratio  = stream && stream->codec ? stream->codec->sample_aspect_ratio : undef;
+    av_reduce(&ratio.num, &ratio.den, ratio.num, ratio.den, INT_MAX);
+    if (ratio.num > 0 && ratio.den > 0)
+        return ratio;
+
+    return undef;
+#endif
+}
+
 
 struct CvCapture_FFMPEG
 {
@@ -427,7 +450,6 @@ struct CvCapture_FFMPEG
     double  get_duration_sec() const;
     double  get_fps() const;
     int     get_bitrate() const;
-    AVRational get_sample_aspect_ratio(AVStream *stream) const;
 
     double  r2d(AVRational r) const;
     int64_t dts_to_frame_number(int64_t dts);
@@ -732,6 +754,17 @@ private:
     AutoLock& operator = (const AutoLock&); // disabled
 };
 
+static void ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list vargs)
+{
+    static bool skip_header = false;
+    static int prev_level = -1;
+    (void)ptr;
+    if (!skip_header || level != prev_level) printf("[OPENCV:FFMPEG:%02d] ", level);
+    vprintf(fmt, vargs);
+    size_t fmt_len = strlen(fmt);
+    skip_header = fmt_len > 0 && fmt[fmt_len - 1] != '\n';
+    prev_level = level;
+}
 
 class InternalFFMpegRegister
 {
@@ -751,7 +784,18 @@ public:
             /* register a callback function for synchronization */
             av_lockmgr_register(&LockCallBack);
 
-            av_log_set_level(AV_LOG_ERROR);
+#ifndef NO_GETENV
+            char* debug_option = getenv("OPENCV_FFMPEG_DEBUG");
+            if (debug_option != NULL)
+            {
+                av_log_set_level(AV_LOG_VERBOSE);
+                av_log_set_callback(ffmpeg_log_callback);
+            }
+            else
+#endif
+            {
+                av_log_set_level(AV_LOG_ERROR);
+            }
 
             _initialized = true;
         }
@@ -848,7 +892,12 @@ bool CvCapture_FFMPEG::open( const char* _filename )
             int enc_width = enc->width;
             int enc_height = enc->height;
 
-            AVCodec *codec = avcodec_find_decoder(enc->codec_id);
+            AVCodec *codec;
+            if(av_dict_get(dict, "video_codec", NULL, 0) == NULL) {
+                codec = avcodec_find_decoder(enc->codec_id);
+            } else {
+                codec = avcodec_find_decoder_by_name(av_dict_get(dict, "video_codec", NULL, 0)->value);
+            }
             if (!codec ||
 #if LIBAVCODEC_VERSION_INT >= ((53<<16)+(8<<8)+0)
                 avcodec_open2(enc, codec, NULL)
@@ -1089,9 +1138,9 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         return (double)video_st->codec.codec_tag;
 #endif
     case CV_FFMPEG_CAP_PROP_SAR_NUM:
-        return get_sample_aspect_ratio(ic->streams[video_stream]).num;
+        return _opencv_ffmpeg_get_sample_aspect_ratio(ic->streams[video_stream]).num;
     case CV_FFMPEG_CAP_PROP_SAR_DEN:
-        return get_sample_aspect_ratio(ic->streams[video_stream]).den;
+        return _opencv_ffmpeg_get_sample_aspect_ratio(ic->streams[video_stream]).den;
     default:
         break;
     }
@@ -1107,11 +1156,6 @@ double CvCapture_FFMPEG::r2d(AVRational r) const
 double CvCapture_FFMPEG::get_duration_sec() const
 {
     double sec = (double)ic->duration / (double)AV_TIME_BASE;
-
-    if (sec < eps_zero)
-    {
-        sec = (double)ic->streams[video_stream]->duration * r2d(ic->streams[video_stream]->time_base);
-    }
 
     if (sec < eps_zero)
     {
@@ -1167,28 +1211,6 @@ int64_t CvCapture_FFMPEG::dts_to_frame_number(int64_t dts)
 {
     double sec = dts_to_sec(dts);
     return (int64_t)(get_fps() * sec + 0.5);
-}
-
-AVRational CvCapture_FFMPEG::get_sample_aspect_ratio(AVStream *stream) const
-{
-    AVRational undef = {0, 1};
-    AVRational stream_sample_aspect_ratio = stream ? stream->sample_aspect_ratio : undef;
-    AVRational frame_sample_aspect_ratio  = stream && stream->codec ? stream->codec->sample_aspect_ratio : undef;
-
-    av_reduce(&stream_sample_aspect_ratio.num, &stream_sample_aspect_ratio.den,
-        stream_sample_aspect_ratio.num,  stream_sample_aspect_ratio.den, INT_MAX);
-    if (stream_sample_aspect_ratio.num <= 0 || stream_sample_aspect_ratio.den <= 0)
-        stream_sample_aspect_ratio = undef;
-
-    av_reduce(&frame_sample_aspect_ratio.num, &frame_sample_aspect_ratio.den,
-        frame_sample_aspect_ratio.num,  frame_sample_aspect_ratio.den, INT_MAX);
-    if (frame_sample_aspect_ratio.num <= 0 || frame_sample_aspect_ratio.den <= 0)
-        frame_sample_aspect_ratio = undef;
-
-    if (stream_sample_aspect_ratio.num)
-        return stream_sample_aspect_ratio;
-    else
-        return frame_sample_aspect_ratio;
 }
 
 double CvCapture_FFMPEG::dts_to_sec(int64_t dts)
@@ -1552,8 +1574,8 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
     }
     if (c->codec_id == CV_CODEC(CODEC_ID_MPEG1VIDEO) || c->codec_id == CV_CODEC(CODEC_ID_MSMPEG4V3)){
         /* needed to avoid using macroblocks in which some coeffs overflow
-           this doesnt happen with normal video, it just happens here as the
-           motion of the chroma plane doesnt match the luma plane */
+           this doesn't happen with normal video, it just happens here as the
+           motion of the chroma plane doesn't match the luma plane */
         /* avoid FFMPEG warning 'clipping 1 dct coefficients...' */
         c->mb_decision=2;
     }
@@ -1573,7 +1595,7 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
 #endif
 
 #if LIBAVCODEC_VERSION_INT>0x000409
-    // some formats want stream headers to be seperate
+    // some formats want stream headers to be separate
     if(oc->oformat->flags & AVFMT_GLOBALHEADER)
     {
 #if LIBAVCODEC_BUILD > CALC_FFMPEG_VERSION(56, 35, 0)
@@ -1586,6 +1608,9 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
 
 #if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(52, 42, 0)
     st->avg_frame_rate = (AVRational){frame_rate, frame_rate_base};
+#endif
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 20, 0)
+    st->time_base = c->time_base;
 #endif
 
     return st;
@@ -1712,7 +1737,7 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
     const int CV_STEP_ALIGNMENT = 32;
     const size_t CV_SIMD_SIZE = 32;
     const size_t CV_PAGE_MASK = ~(4096 - 1);
-    const uchar* dataend = data + ((size_t)height * step);
+    const unsigned char* dataend = data + ((size_t)height * step);
     if (step % CV_STEP_ALIGNMENT != 0 ||
         (((size_t)dataend - CV_SIMD_SIZE) & CV_PAGE_MASK) != (((size_t)dataend + CV_SIMD_SIZE) & CV_PAGE_MASK))
     {
@@ -2326,9 +2351,6 @@ AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, CV_CODEC
     c->codec_type = AVMEDIA_TYPE_VIDEO;
 
     // put sample parameters
-    unsigned long long lbit_rate = static_cast<unsigned long long>(bitrate);
-    lbit_rate += (bitrate / 4);
-    lbit_rate = std::min(lbit_rate, static_cast<unsigned long long>(std::numeric_limits<int>::max()));
     c->bit_rate = bitrate;
 
     // took advice from
@@ -2392,8 +2414,8 @@ AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, CV_CODEC
     if (c->codec_id == CV_CODEC(CODEC_ID_MPEG1VIDEO) || c->codec_id == CV_CODEC(CODEC_ID_MSMPEG4V3))
     {
         // needed to avoid using macroblocks in which some coeffs overflow
-        // this doesnt happen with normal video, it just happens here as the
-        // motion of the chroma plane doesnt match the luma plane
+        // this doesn't happen with normal video, it just happens here as the
+        // motion of the chroma plane doesn't match the luma plane
 
         // avoid FFMPEG warning 'clipping 1 dct coefficients...'
 
@@ -2401,7 +2423,7 @@ AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, CV_CODEC
     }
 
     #if LIBAVCODEC_VERSION_INT > 0x000409
-        // some formats want stream headers to be seperate
+        // some formats want stream headers to be separate
         if (oc->oformat->flags & AVFMT_GLOBALHEADER)
         {
             #if LIBAVCODEC_BUILD > CALC_FFMPEG_VERSION(56, 35, 0)

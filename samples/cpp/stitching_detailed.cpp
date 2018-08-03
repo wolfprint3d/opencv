@@ -82,7 +82,7 @@ static void printUsage()
         "\nMotion Estimation Flags:\n"
         "  --work_megapix <float>\n"
         "      Resolution for image registration step. The default is 0.6 Mpx.\n"
-        "  --features (surf|orb)\n"
+        "  --features (surf|orb|sift)\n"
         "      Type of features used for images matching. The default is surf.\n"
         "  --matcher (homography|affine)\n"
         "      Matcher used for pairwise image matching.\n"
@@ -430,6 +430,9 @@ int main(int argc, char* argv[])
     {
         finder = makePtr<OrbFeaturesFinder>();
     }
+    else if (features_type == "sift") {
+        finder = makePtr<SiftFeaturesFinder>();
+    }
     else
     {
         cout << "Unknown 2D features type: '" << features_type << "'.\n";
@@ -465,7 +468,7 @@ int main(int argc, char* argv[])
                 work_scale = min(1.0, sqrt(work_megapix * 1e6 / full_img.size().area()));
                 is_work_scale_set = true;
             }
-            resize(full_img, img, Size(), work_scale, work_scale);
+            resize(full_img, img, Size(), work_scale, work_scale, INTER_LINEAR_EXACT);
         }
         if (!is_seam_scale_set)
         {
@@ -478,7 +481,7 @@ int main(int argc, char* argv[])
         features[i].img_idx = i;
         LOGLN("Features in image #" << i+1 << ": " << features[i].keypoints.size());
 
-        resize(full_img, img, Size(), seam_scale, seam_scale);
+        resize(full_img, img, Size(), seam_scale, seam_scale, INTER_LINEAR_EXACT);
         images[i] = img.clone();
     }
 
@@ -805,7 +808,7 @@ int main(int argc, char* argv[])
             }
         }
         if (abs(compose_scale - 1) > 1e-1)
-            resize(full_img, img, Size(), compose_scale, compose_scale);
+            resize(full_img, img, Size(), compose_scale, compose_scale, INTER_LINEAR_EXACT);
         else
             img = full_img;
         full_img.release();
@@ -831,7 +834,7 @@ int main(int argc, char* argv[])
         mask.release();
 
         dilate(masks_warped[img_idx], dilated_mask, Mat());
-        resize(dilated_mask, seam_mask, mask_warped.size());
+        resize(dilated_mask, seam_mask, mask_warped.size(), 0, 0, INTER_LINEAR_EXACT);
         mask_warped = seam_mask & mask_warped;
 
         if (!blender && !timelapse)
