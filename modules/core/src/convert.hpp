@@ -172,22 +172,16 @@ inline short convertFp16SW(float fp32)
 
 }
 
-#if _MSC_VER
-#  define CV_API __declspec(dllexport)
-#else
-#  define CV_API __attribute__((visibility("default")))
-#endif
-
 namespace cv
 {
 namespace opt_FP16
 {
-    CV_API void cvtScaleHalf_SIMD32f16f( const float* src, size_t sstep, short* dst, size_t dstep, cv::Size size );
-    CV_API void cvtScaleHalf_SIMD16f32f( const short* src, size_t sstep, float* dst, size_t dstep, cv::Size size );
+    void cvtScaleHalf_SIMD32f16f( const float* src, size_t sstep, short* dst, size_t dstep, cv::Size size );
+    void cvtScaleHalf_SIMD16f32f( const short* src, size_t sstep, float* dst, size_t dstep, cv::Size size );
 }
 namespace opt_AVX2
 {
-    CV_API void cvtScale_s16s32f32Line_AVX2(const short* src, int* dst, float scale, float shift, int width);
+    void cvtScale_s16s32f32Line_AVX2(const short* src, int* dst, float scale, float shift, int width);
 }
 namespace opt_SSE4_1
 {
