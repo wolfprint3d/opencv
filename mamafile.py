@@ -22,16 +22,18 @@ class opencv(mama.BuildTarget):
             "BUILD_opencv_nonfree=OFF", "BUILD_SHARED_LIBS=OFF", "BUILD_opencv_java=OFF", 
             "BUILD_opencv_python2=OFF", "BUILD_opencv_python3=OFF", "BUILD_opencv_xphoto=ON"
         ]
-        if   self.config.android: opt += ['BUILD_ANDROID_EXAMPLES=OFF', 'BUILD_opencv_androidcamera=ON']
-        elif self.config.ios:     opt += ['IOS_ARCH=arm64']
-        elif self.config.windows: opt += ['BUILD_WITH_STATIC_CRT=OFF']
-        elif self.config.macos:   opt += ['WITH_GSTREAMER=OFF', 'WITH_GPHOTO2=OFF']
-        elif self.config.linux:   opt += []
+        if   self.android: opt += ['BUILD_ANDROID_EXAMPLES=OFF', 'BUILD_opencv_androidcamera=ON']
+        elif self.ios:     opt += ['IOS_ARCH=arm64']
+        elif self.windows: opt += ['BUILD_WITH_STATIC_CRT=OFF']
+        elif self.macos:   opt += ['WITH_GSTREAMER=OFF', 'WITH_GPHOTO2=OFF']
+        elif self.linux:   opt += []
         self.add_cmake_options(opt)
         self.cmake_build_type = 'Release'
         self.cmake_ios_toolchain = '../platforms/ios/cmake/Toolchains/Toolchain-iPhoneOS_Xcode.cmake'
-        if self.config.ios:
-            self.enable_ninja_build = False # opencv for ios blows up with Ninja
+        if self.linux:
+            self.add_cxx_flags('-mfma')
+        if self.ios:
+            self.disable_ninja_build() # opencv for ios blows up with Ninja
 
     def package(self):
        self.export_libs('lib', order=['xphoto','calib3d','features2d','flann', 'objdetect', 'photo', 'imgcodecs', 'imgproc', 'highgui', 'video', 'videoio', 'core'])
