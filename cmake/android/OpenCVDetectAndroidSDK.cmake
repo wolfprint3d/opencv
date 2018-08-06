@@ -201,7 +201,7 @@ endif()  # BUILD_ANDROID_PROJECTS
 if(ANDROID_PROJECTS_BUILD_TYPE STREQUAL "ANT")
   include(${CMAKE_CURRENT_LIST_DIR}/android_ant_projects.cmake)
 elseif(ANDROID_PROJECTS_BUILD_TYPE STREQUAL "GRADLE")
-  include(${CMAKE_CURRENT_LIST_DIR}/android_gradle_projects.cmake)
+  #include(${CMAKE_CURRENT_LIST_DIR}/android_gradle_projects.cmake)
 elseif(BUILD_ANDROID_PROJECTS)
   message(FATAL_ERROR "Internal error")
 else()
