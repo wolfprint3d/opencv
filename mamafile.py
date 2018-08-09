@@ -29,7 +29,7 @@ class opencv(mama.BuildTarget):
         elif self.linux:   opt += []
         self.add_cmake_options(opt)
         self.cmake_build_type = 'Release'
-        self.cmake_ios_toolchain = '../platforms/ios/cmake/Toolchains/Toolchain-iPhoneOS_Xcode.cmake'
+        self.cmake_ios_toolchain = 'platforms/ios/cmake/Toolchains/Toolchain-iPhoneOS_Xcode.cmake'
         if self.linux:
             self.add_cl_flags('-mfma')
         if self.ios:
