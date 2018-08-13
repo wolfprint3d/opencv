@@ -1358,7 +1358,8 @@ void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) 
 
 //==================================================================================================
 
-namespace cv {
+namespace cv
+{
 
 // template for FP16 HW conversion function
 template<typename T, typename DT> static void
@@ -1367,7 +1368,9 @@ cvtScaleHalf_( const T* src, size_t sstep, DT* dst, size_t dstep, Size size);
 template<> void
 cvtScaleHalf_<float, short>( const float* src, size_t sstep, short* dst, size_t dstep, Size size )
 {
+#if CV_CPU_FORCE_FP16
     CV_CPU_CALL_FP16_(cvtScaleHalf_SIMD32f16f, (src, sstep, dst, dstep, size));
+#endif
 
 #if !CV_CPU_FORCE_FP16
     sstep /= sizeof(src[0]);
@@ -1386,7 +1389,9 @@ cvtScaleHalf_<float, short>( const float* src, size_t sstep, short* dst, size_t 
 template<> void
 cvtScaleHalf_<short, float>( const short* src, size_t sstep, float* dst, size_t dstep, Size size )
 {
+#if CV_CPU_FORCE_FP16
     CV_CPU_CALL_FP16_(cvtScaleHalf_SIMD16f32f, (src, sstep, dst, dstep, size));
+#endif
 
 #if !CV_CPU_FORCE_FP16
     sstep /= sizeof(src[0]);

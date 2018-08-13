@@ -2,10 +2,9 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-
 #include "precomp.hpp"
 #include "convert.hpp"
-
+#if CV_CPU_FORCE_FP16
 namespace cv
 {
 namespace opt_FP16
@@ -124,3 +123,5 @@ void cvtScaleHalf_SIMD16f32f( const short* src, size_t sstep, float* dst, size_t
 }
 
 } // cv::
+
+#endif // CV_TRY_FP16

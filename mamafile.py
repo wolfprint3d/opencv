@@ -1,8 +1,6 @@
 import mama
 class opencv(mama.BuildTarget):
     def dependencies(self):
-        # custom mamafile can be passed explicitly:
-        #self.add_git('zlib', 'https://github.com/madler/zlib.git', mamafile='zlib.py')
         pass
 
     def configure(self):

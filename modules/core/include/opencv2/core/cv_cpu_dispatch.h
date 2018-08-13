@@ -191,7 +191,7 @@ struct VZeroUpperGuard {
 #  define CV_AVX 0
 #endif
 #ifndef CV_FP16
-#  define CV_FP16 0
+#  define CV_FP16 CV_CPU_DISPATCH_COMPILE_FP16
 #endif
 #ifndef CV_AVX2
 #  define CV_AVX2 0
