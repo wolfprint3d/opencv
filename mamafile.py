@@ -53,3 +53,10 @@ class opencv(mama.BuildTarget):
             self.export_libs('lib', ['world.a', 'world342.lib'])
             self.export_libs('3rdparty/lib')
             self.export_include('include', build_dir=True)
+        
+        if self.macos:   self.export_syslib('-framework OpenGL')
+        if self.ios:     self.export_syslib('-framework OpenGLES')
+        if self.windows: self.export_syslib('opengl32.lib')
+        if self.linux:   self.export_syslib('GL') # libGL.so
+        if self.android: pass # TODO
+    
