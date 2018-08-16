@@ -19,7 +19,8 @@ class opencv(mama.BuildTarget):
             "BUILD_opencv_stitching=OFF", "BUILD_opencv_superres=OFF", "BUILD_opencv_ts=OFF",
             "BUILD_opencv_video=ON",      "BUILD_opencv_videoio=ON",   "BUILD_opencv_videostab=OFF",
             "BUILD_opencv_nonfree=OFF",   "BUILD_SHARED_LIBS=OFF",     "BUILD_opencv_java=OFF", 
-            "BUILD_opencv_python2=OFF",   "BUILD_opencv_python3=OFF",  "BUILD_opencv_xphoto=ON"
+            "BUILD_opencv_python2=OFF",   "BUILD_opencv_python3=OFF",  "BUILD_opencv_xphoto=ON",
+            "BUILD_opencv_world=ON"
         ]
         if   self.android: opt += ['BUILD_ANDROID_EXAMPLES=OFF', 'BUILD_opencv_androidcamera=ON']
         elif self.ios:     opt += ['IOS_ARCH=arm64']
@@ -35,13 +36,13 @@ class opencv(mama.BuildTarget):
             self.disable_ninja_build() # opencv for ios blows up with Ninja
 
     def package(self):
-        order = ['xphoto','calib3d','features2d','flann', 'objdetect', 'photo', 'imgcodecs', 
-                 'imgproc', 'highgui', 'video', 'videoio', 'core']
+        # order = ['xphoto','calib3d','features2d','flann', 'objdetect', 'photo', 'imgcodecs', 
+        #          'imgproc', 'highgui', 'video', 'videoio', 'core']
         if self.android:
-            self.export_libs('sdk/native/staticlibs', order=order)
+            self.export_libs('sdk/native/staticlibs', ['world.a', 'world.lib'])
             self.export_libs('sdk/native/3rdparty/libs')
             self.export_include('sdk/native/jni/include', build_dir=True)
         else:
-            self.export_libs('lib', order=order)
+            self.export_libs('lib', ['world.a', 'world.lib'])
             self.export_libs('3rdparty/lib')
             self.export_include('include', build_dir=True)
