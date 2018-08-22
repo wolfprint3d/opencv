@@ -37,6 +37,8 @@ class opencv(mama.BuildTarget):
         self.add_cmake_options(opt)
         self.cmake_build_type = 'Release'
         self.cmake_ios_toolchain = 'platforms/ios/cmake/Toolchains/Toolchain-iPhoneOS_Xcode.cmake'
+        if self.android:
+            self.add_cxx_flags('-I/')
         if self.windows:
             self.add_cl_flags('/wd4819')
         if self.linux:
