@@ -33,7 +33,7 @@ class opencv(mama.BuildTarget):
         elif self.ios:     opt += ['IOS_ARCH=arm64']
         elif self.windows: opt += ['BUILD_WITH_STATIC_CRT=OFF']
         elif self.macos:   opt += ['WITH_GSTREAMER=OFF', 'WITH_GPHOTO2=OFF']
-        elif self.linux:   opt += []
+        elif self.linux:   opt += ['WITH_GSTREAMER=OFF', 'WITH_GPHOTO2=OFF']
         self.add_cmake_options(opt)
         self.cmake_build_type = 'Release'
         self.cmake_ios_toolchain = 'platforms/ios/cmake/Toolchains/Toolchain-iPhoneOS_Xcode.cmake'
