@@ -865,16 +865,3 @@ if(CV_DISABLE_OPTIMIZATION OR CV_ICC)
 else()
   ocv_update(CV_ENABLE_UNROLLED 1)
 endif()
-© 2019 GitHub, Inc.
-Terms
-Privacy
-Security
-Status
-Help
-Contact GitHub
-Pricing
-API
-Training
-Blog
-About
-Press h to open a hovercard with more details.
