@@ -1,21 +1,3 @@
-Skip to content
- 
-Search or jump to…
-
-Pull requests
-Issues
-Marketplace
-Explore
- @mijovic Sign out
-2,377
-31,314 22,358 opencv/opencv
- Code  Issues 1,522  Pull requests 51  Wiki  Insights
-opencv/cmake/OpenCVCompilerOptimizations.cmake
-fab0eb0  on Nov 28, 2018
-@alalek alalek cmake: fix compiler flags (CPU_BASELINE_REQUIRED=xxx + CPU_BASELINE=D…
-@alalek @seiko2plus @mshabunin @GregoryMorse @dkurt @fenrus75
-    
-869 lines (794 sloc)  34.5 KB
 # x86/x86-64 arch:
 # SSE / SSE2 (always available on 64-bit CPUs)
 # SSE3 / SSSE3
