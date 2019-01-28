@@ -42,7 +42,7 @@ vecmerge_( const T** src, T* dst, int len, int cn )
     if( r != 0 )
     {
         mode = hal::STORE_UNALIGNED;
-        if (r % dstElemSize == 0 && len > VECSZ)
+        if (r % dstElemSize == 0 && len > VECSZ*2)
             i0 = VECSZ - (r / dstElemSize);
     }
 
@@ -216,8 +216,10 @@ static MergeFunc getMergeFunc(int depth)
 {
     static MergeFunc mergeTab[] =
     {
-        (MergeFunc)GET_OPTIMIZED(cv::hal::merge8u), (MergeFunc)GET_OPTIMIZED(cv::hal::merge8u), (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u), (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u),
-        (MergeFunc)GET_OPTIMIZED(cv::hal::merge32s), (MergeFunc)GET_OPTIMIZED(cv::hal::merge32s), (MergeFunc)GET_OPTIMIZED(cv::hal::merge64s), 0
+        (MergeFunc)GET_OPTIMIZED(cv::hal::merge8u), (MergeFunc)GET_OPTIMIZED(cv::hal::merge8u),
+        (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u), (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u),
+        (MergeFunc)GET_OPTIMIZED(cv::hal::merge32s), (MergeFunc)GET_OPTIMIZED(cv::hal::merge32s),
+        (MergeFunc)GET_OPTIMIZED(cv::hal::merge64s), (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u)
     };
 
     return mergeTab[depth];
@@ -228,8 +230,8 @@ static MergeFunc getMergeFunc(int depth)
 namespace cv {
 static bool ipp_merge(const Mat* mv, Mat& dst, int channels)
 {
-#ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP()
+#ifdef HAVE_IPP_IW_LL
+    CV_INSTRUMENT_REGION_IPP();
 
     if(channels != 3 && channels != 4)
         return false;
@@ -279,7 +281,7 @@ static bool ipp_merge(const Mat* mv, Mat& dst, int channels)
 
 void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert( mv && n > 0 );
 
@@ -427,7 +429,7 @@ static bool ocl_merge( InputArrayOfArrays _mv, OutputArray _dst )
 
 void cv::merge(InputArrayOfArrays _mv, OutputArray _dst)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_OCL_RUN(_mv.isUMatVector() && _dst.isUMat(),
                ocl_merge(_mv, _dst))

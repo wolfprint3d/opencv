@@ -1,30 +1,16 @@
-Skip to content
- 
-Search or jump to…
-
-Pull requests
-Issues
-Marketplace
-Explore
- @mijovic Sign out
-2,377
-31,314 22,358 opencv/opencv
- Code  Issues 1,522  Pull requests 51  Wiki  Insights
-opencv/platforms/ios/build_framework.py
-0c16d8f  on Dec 13, 2018
-@alalek alalek Merge remote-tracking branch 'upstream/3.4' into merge-3.4
-@alalek @mshabunin @ysolovyov @ilya-lavrenov @amrox @akashivskyy @vpisarev @alekcac @Legoless @nevir @benjohnde @dulacp @atrebbi
-    
-Executable File  311 lines (256 sloc)  12.3 KB
 #!/usr/bin/env python
 """
 The script builds OpenCV.framework for iOS.
 The built framework is universal, it can be used to build app and run it on either iOS simulator or real device.
+
 Usage:
     ./build_framework.py <outputdir>
+
 By cmake conventions (and especially if you work with OpenCV repository),
 the output dir should not be a subdirectory of OpenCV source tree.
+
 Script will create <outputdir>, if it's missing, and a few its subdirectories:
+
     <outputdir>
         build/
             iPhoneOS-*/
@@ -33,9 +19,11 @@ Script will create <outputdir>, if it's missing, and a few its subdirectories:
                [cmake-generated build tree for iOS simulator]
         opencv2.framework/
             [the framework content]
+
 The script should handle minor OpenCV updates efficiently
 - it does not recompile the library from scratch each time.
 However, opencv2.framework directory is erased and recreated on each run.
+
 Adding --dynamic parameter will build opencv2.framework as App Store dynamic framework. Only iOS 8+ versions are supported.
 """
 
@@ -320,16 +308,3 @@ if __name__ == "__main__":
             (iphonesimulator_archs, "iPhoneSimulator"),
         ])
     b.build(args.out)
-© 2019 GitHub, Inc.
-Terms
-Privacy
-Security
-Status
-Help
-Contact GitHub
-Pricing
-API
-Training
-Blog
-About
-Press h to open a hovercard with more details.

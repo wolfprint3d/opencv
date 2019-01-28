@@ -45,6 +45,7 @@
 #include "opencl_kernels_imgproc.hpp"
 #include <iostream>
 #include "hal_replacement.hpp"
+#include <opencv2/core/utils/configuration.private.hpp>
 
 /****************************************************************************************\
                      Basic Morphological Operations: Erosion & Dilation
@@ -1110,7 +1111,7 @@ static bool halMorph(int op, int src_type, int dst_type,
 }
 
 // ===== 2. IPP implementation
-#ifdef HAVE_IPP
+#if 0 //defined HAVE_IPP
 #ifdef HAVE_IPP_IW
 static inline IwiMorphologyType ippiGetMorphologyType(int morphOp)
 {
@@ -1135,7 +1136,7 @@ static bool ippMorph(int op, int src_type, int dst_type,
               int borderType, const double borderValue[4], int iterations, bool isSubmatrix)
 {
 #ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 < 201800
     // Problem with SSE42 optimizations performance
@@ -1299,7 +1300,7 @@ static bool ippMorph(int op, int src_type, int dst_type,
                 CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterMorphology, iwSrc, iwDst, morphType, iwMask, ::ipp::IwDefault(), iwBorderType);
         }
     }
-    catch(::ipp::IwException ex)
+    catch(const ::ipp::IwException &)
     {
         return false;
     }
@@ -1384,12 +1385,12 @@ void morph(int op, int src_type, int dst_type,
             return;
     }
 
-    CV_IPP_RUN_FAST(ippMorph(op, src_type, dst_type, src_data, src_step, dst_data, dst_step, width, height,
+    /*CV_IPP_RUN_FAST(ippMorph(op, src_type, dst_type, src_data, src_step, dst_data, dst_step, width, height,
                             roi_width, roi_height, roi_x, roi_y,
                             roi_width2, roi_height2, roi_x2, roi_y2,
                             kernel_type, kernel_data, kernel_step,
                             kernel_width, kernel_height, anchor_x, anchor_y,
-                            borderType, borderValue, iterations, isSubmatrix));
+                            borderType, borderValue, iterations, isSubmatrix));*/
 
     ocvMorph(op, src_type, dst_type, src_data, src_step, dst_data, dst_step, width, height,
              roi_width, roi_height, roi_x, roi_y,
@@ -1405,7 +1406,6 @@ void morph(int op, int src_type, int dst_type,
 
 #define ROUNDUP(sz, n)      ((sz) + (n) - 1 - (((sz) + (n) - 1) % (n)))
 
-#ifndef __APPLE__
 static bool ocl_morph3x3_8UC1( InputArray _src, OutputArray _dst, InputArray _kernel, Point anchor,
                                int op, int actual_op = -1, InputArray _extraMat = noArray())
 {
@@ -1632,7 +1632,6 @@ static bool ocl_morphSmall( InputArray _src, OutputArray _dst, InputArray _kerne
 
     return kernel.run(2, globalsize, NULL, false);
 }
-#endif
 
 static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
                         Point anchor, int iterations, int op, int borderType,
@@ -1652,24 +1651,33 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
 
     if (kernel.empty())
     {
-        kernel = getStructuringElement(MORPH_RECT, Size(1+iterations*2,1+iterations*2));
+        ksize = Size(1+iterations*2,1+iterations*2);
+        kernel = getStructuringElement(MORPH_RECT, ksize);
         anchor = Point(iterations, iterations);
         iterations = 1;
+        CV_DbgAssert(ksize == kernel.size());
     }
     else if( iterations > 1 && countNonZero(kernel) == kernel.rows*kernel.cols )
     {
+        ksize = Size(ksize.width + (iterations-1)*(ksize.width-1),
+                     ksize.height + (iterations-1)*(ksize.height-1));
         anchor = Point(anchor.x*iterations, anchor.y*iterations);
-        kernel = getStructuringElement(MORPH_RECT,
-                                       Size(ksize.width + (iterations-1)*(ksize.width-1),
-                                            ksize.height + (iterations-1)*(ksize.height-1)),
-                                       anchor);
+        kernel = getStructuringElement(MORPH_RECT, ksize, anchor);
         iterations = 1;
+        CV_DbgAssert(ksize == kernel.size());
     }
 
+    static bool param_use_morph_special_kernels = utils::getConfigurationParameterBool("OPENCV_OPENCL_IMGPROC_MORPH_SPECIAL_KERNEL",
 #ifndef __APPLE__
+        true
+#else
+        false
+#endif
+        );
+
     int esz = CV_ELEM_SIZE(type);
     // try to use OpenCL kernel adopted for small morph kernel
-    if (dev.isIntel() &&
+    if (param_use_morph_special_kernels && dev.isIntel() &&
         ((ksize.width < 5 && ksize.height < 5 && esz <= 4) ||
          (ksize.width == 5 && ksize.height == 5 && cn == 1)) &&
          (iterations == 1)
@@ -1681,7 +1689,6 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
         if (ocl_morphSmall(_src, _dst, kernel, anchor, borderType, op, actual_op, _extraMat))
             return true;
     }
-#endif
 
     if (iterations == 0 || kernel.rows*kernel.cols == 1)
     {
@@ -1820,7 +1827,7 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
                      Point anchor, int iterations,
                      int borderType, const Scalar& borderValue )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat kernel = _kernel.getMat();
     Size ksize = !kernel.empty() ? kernel.size() : Size(3,3);
@@ -1888,7 +1895,7 @@ void cv::erode( InputArray src, OutputArray dst, InputArray kernel,
                 Point anchor, int iterations,
                 int borderType, const Scalar& borderValue )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     morphOp( MORPH_ERODE, src, dst, kernel, anchor, iterations, borderType, borderValue );
 }
@@ -1898,7 +1905,7 @@ void cv::dilate( InputArray src, OutputArray dst, InputArray kernel,
                  Point anchor, int iterations,
                  int borderType, const Scalar& borderValue )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     morphOp( MORPH_DILATE, src, dst, kernel, anchor, iterations, borderType, borderValue );
 }
@@ -1967,7 +1974,7 @@ static bool ocl_morphologyEx(InputArray _src, OutputArray _dst, int op,
 #endif
 
 #define IPP_DISABLE_MORPH_ADV 1
-#ifdef HAVE_IPP
+#if 0 //defined HAVE_IPP
 #if !IPP_DISABLE_MORPH_ADV
 namespace cv {
 static bool ipp_morphologyEx(int op, InputArray _src, OutputArray _dst,
@@ -2042,7 +2049,7 @@ void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
                        InputArray _kernel, Point anchor, int iterations,
                        int borderType, const Scalar& borderValue )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat kernel = _kernel.getMat();
     if (kernel.empty())
@@ -2064,7 +2071,7 @@ void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
     Mat dst = _dst.getMat();
 
 #if !IPP_DISABLE_MORPH_ADV
-    CV_IPP_RUN_FAST(ipp_morphologyEx(op, src, dst, kernel, anchor, iterations, borderType, borderValue));
+    //CV_IPP_RUN_FAST(ipp_morphologyEx(op, src, dst, kernel, anchor, iterations, borderType, borderValue));
 #endif
 
     switch( op )

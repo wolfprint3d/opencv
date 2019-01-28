@@ -826,6 +826,7 @@ macro(__ocv_add_dispatched_file filename target_src_var src_directory dst_direct
 
     set(__declarations_str "${__declarations_str}
 #define CV_CPU_DISPATCH_MODES_ALL ${__dispatch_modes}
+
 #undef CV_CPU_SIMD_FILENAME
 ")
 

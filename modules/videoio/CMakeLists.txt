@@ -32,7 +32,9 @@ set(videoio_srcs
 file(GLOB videoio_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h")
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/legacy/*.h"
+)
 
 # Removing WinRT API headers by default
 list(REMOVE_ITEM videoio_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cap_winrt.hpp")
@@ -73,10 +75,6 @@ if(HAVE_MFX)
   list(APPEND VIDEOIO_LIBRARIES mfx)
 endif()
 
-if(WIN32 AND NOT ARM)
-  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_cmu.cpp)
-endif()
-
 if (WIN32 AND HAVE_DSHOW)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_dshow.cpp)
   list(APPEND videoio_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/cap_dshow.hpp)
@@ -85,16 +83,12 @@ if (WIN32 AND HAVE_DSHOW)
   endif()
 endif()
 
-if (WIN32 AND HAVE_MSMF)
+if(WIN32 AND HAVE_MSMF)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_msmf.hpp)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_msmf.cpp)
-  if (HAVE_DXVA)
-    add_definitions(-DHAVE_DXVA)
+  if(HAVE_MSMF_DXVA)
+    add_definitions(-DHAVE_MSMF_DXVA)
   endif()
-endif()
-
-if (WIN32 AND HAVE_VFW)
-  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_vfw.cpp)
 endif()
 
 if(HAVE_XINE)
@@ -105,10 +99,6 @@ if(HAVE_DC1394_2)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_dc1394_v2.cpp)
 endif(HAVE_DC1394_2)
 
-if(HAVE_DC1394)
-  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_dc1394.cpp)
-endif(HAVE_DC1394)
-
 if(HAVE_GSTREAMER)
   IF(WIN32)
     INCLUDE_DIRECTORIES(${GSTREAMER_INCLUDE_DIR})
@@ -117,13 +107,7 @@ if(HAVE_GSTREAMER)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_gstreamer.cpp)
 endif(HAVE_GSTREAMER)
 
-if(HAVE_UNICAP)
-  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_unicap.cpp)
-endif(HAVE_UNICAP)
-
-if(HAVE_LIBV4L)
-  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_libv4l.cpp)
-elseif(HAVE_CAMV4L2 OR HAVE_VIDEOIO)
+if(HAVE_CAMV4L2 OR HAVE_VIDEOIO)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_v4l.cpp)
 endif()
 
@@ -206,19 +190,17 @@ if(HAVE_AVFOUNDATION)
   endif()
 endif()
 
-if(HAVE_QUICKTIME)
-  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_qt.cpp)
-  list(APPEND VIDEOIO_LIBRARIES "-framework Carbon" "-framework QuickTime" "-framework CoreFoundation" "-framework QuartzCore")
-elseif(HAVE_QTKIT)
-  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_qtkit.mm)
-  list(APPEND VIDEOIO_LIBRARIES "-framework QTKit" "-framework QuartzCore" "-framework AppKit")
-endif()
-
 if(HAVE_INTELPERC)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_intelperc.cpp)
   ocv_include_directories(${INTELPERC_INCLUDE_DIR})
   list(APPEND VIDEOIO_LIBRARIES ${INTELPERC_LIBRARIES})
 endif(HAVE_INTELPERC)
+
+if(HAVE_LIBREALSENSE)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_librealsense.cpp)
+  ocv_include_directories(${LIBREALSENSE_INCLUDE_DIR})
+  list(APPEND VIDEOIO_LIBRARIES ${LIBREALSENSE_LIBRARIES})
+endif(HAVE_LIBREALSENSE)
 
 if(HAVE_GPHOTO2)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_gphoto2.cpp)

@@ -69,10 +69,6 @@ void drawPoints(const std::vector<Point2f> &points, Mat &outImage, int radius = 
 
 void CirclesGridClusterFinder::hierarchicalClustering(const std::vector<Point2f> &points, const Size &patternSz, std::vector<Point2f> &patternPoints)
 {
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if(tegra::useTegra() && tegra::hierarchicalClustering(points, patternSz, patternPoints))
-        return;
-#endif
     int j, n = (int)points.size();
     size_t pn = static_cast<size_t>(patternSz.area());
 
@@ -178,7 +174,7 @@ void CirclesGridClusterFinder::findGrid(const std::vector<cv::Point2f> &points, 
     if(outsideCorners.size() != outsideCornersCount)
       return;
   }
-  getSortedCorners(hull2f, corners, outsideCorners, sortedCorners);
+  getSortedCorners(hull2f, patternPoints, corners, outsideCorners, sortedCorners);
   if(sortedCorners.size() != cornersCount)
     return;
 
@@ -295,7 +291,18 @@ void CirclesGridClusterFinder::findOutsideCorners(const std::vector<cv::Point2f>
 #endif
 }
 
-void CirclesGridClusterFinder::getSortedCorners(const std::vector<cv::Point2f> &hull2f, const std::vector<cv::Point2f> &corners, const std::vector<cv::Point2f> &outsideCorners, std::vector<cv::Point2f> &sortedCorners)
+namespace {
+double pointLineDistance(const cv::Point2f &p, const cv::Vec4f &line)
+{
+  Vec3f pa( line[0], line[1], 1 );
+  Vec3f pb( line[2], line[3], 1 );
+  Vec3f l = pa.cross(pb);
+  return std::abs((p.x * l[0] + p.y * l[1] + l[2])) * 1.0 /
+         std::sqrt(double(l[0] * l[0] + l[1] * l[1]));
+}
+}
+
+void CirclesGridClusterFinder::getSortedCorners(const std::vector<cv::Point2f> &hull2f, const std::vector<cv::Point2f> &patternPoints, const std::vector<cv::Point2f> &corners, const std::vector<cv::Point2f> &outsideCorners, std::vector<cv::Point2f> &sortedCorners)
 {
   Point2f firstCorner;
   if(isAsymmetricGrid)
@@ -341,10 +348,26 @@ void CirclesGridClusterFinder::getSortedCorners(const std::vector<cv::Point2f> &
 
   if(!isAsymmetricGrid)
   {
-    double dist1 = norm(sortedCorners[0] - sortedCorners[1]);
-    double dist2 = norm(sortedCorners[1] - sortedCorners[2]);
+    double dist01 = norm(sortedCorners[0] - sortedCorners[1]);
+    double dist12 = norm(sortedCorners[1] - sortedCorners[2]);
+    // Use half the average distance between circles on the shorter side as threshold for determining whether a point lies on an edge.
+    double thresh = min(dist01, dist12) / min(patternSize.width, patternSize.height) / 2;
 
-    if((dist1 > dist2 && patternSize.height > patternSize.width) || (dist1 < dist2 && patternSize.height < patternSize.width))
+    size_t circleCount01 = 0;
+    size_t circleCount12 = 0;
+    Vec4f line01( sortedCorners[0].x, sortedCorners[0].y, sortedCorners[1].x, sortedCorners[1].y );
+    Vec4f line12( sortedCorners[1].x, sortedCorners[1].y, sortedCorners[2].x, sortedCorners[2].y );
+    // Count the circles along both edges.
+    for (size_t i = 0; i < patternPoints.size(); i++)
+    {
+      if (pointLineDistance(patternPoints[i], line01) < thresh)
+        circleCount01++;
+      if (pointLineDistance(patternPoints[i], line12) < thresh)
+        circleCount12++;
+    }
+
+    // Ensure that the edge from sortedCorners[0] to sortedCorners[1] is the one with more circles (i.e. it is interpreted as the pattern's width).
+    if ((circleCount01 > circleCount12 && patternSize.height > patternSize.width) || (circleCount01 < circleCount12 && patternSize.height < patternSize.width))
     {
       for(size_t i=0; i<sortedCorners.size()-1; i++)
       {
@@ -394,9 +417,9 @@ void CirclesGridClusterFinder::rectifyPatternPoints(const std::vector<cv::Point2
 void CirclesGridClusterFinder::parsePatternPoints(const std::vector<cv::Point2f> &patternPoints, const std::vector<cv::Point2f> &rectifiedPatternPoints, std::vector<cv::Point2f> &centers)
 {
 #ifndef HAVE_OPENCV_FLANN
-  (void)patternPoints;
-  (void)rectifiedPatternPoints;
-  (void)centers;
+  CV_UNUSED(patternPoints);
+  CV_UNUSED(rectifiedPatternPoints);
+  CV_UNUSED(centers);
   CV_Error(Error::StsNotImplemented, "The desired functionality requires flann module, which was disabled.");
 #else
   flann::LinearIndexParams flannIndexParams;
@@ -565,13 +588,9 @@ CirclesGridFinderParameters::CirclesGridFinderParameters()
 
   minRNGEdgeSwitchDist = 5.f;
   gridType = SYMMETRIC_GRID;
-}
 
-CirclesGridFinderParameters2::CirclesGridFinderParameters2()
-: CirclesGridFinderParameters()
-{
-    squareSize = 1.0f;
-    maxRectifiedDistance = squareSize/2.0f;
+  squareSize = 1.0f;
+  maxRectifiedDistance = squareSize/2.0f;
 }
 
 CirclesGridFinder::CirclesGridFinder(Size _patternSize, const std::vector<Point2f> &testKeypoints,

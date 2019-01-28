@@ -50,11 +50,11 @@ public:
 
 protected:
     int prepare_test_case( int test_case_idx );
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
     void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
-    CvSize aperture_size;
-    CvPoint anchor;
+    Size aperture_size;
+    Point anchor;
     int max_aperture_size;
     bool fp_kernel;
     bool inplace;
@@ -70,19 +70,19 @@ CV_FilterBaseTest::CV_FilterBaseTest( bool _fp_kernel ) : fp_kernel(_fp_kernel)
     test_array[REF_OUTPUT].push_back(NULL);
     max_aperture_size = 13;
     inplace = false;
-    aperture_size = cvSize(0,0);
-    anchor = cvPoint(0,0);
+    aperture_size = Size(0,0);
+    anchor = Point(0,0);
     element_wise_relative_error = false;
 }
 
 
-int CV_FilterBaseTest::read_params( CvFileStorage* fs )
+int CV_FilterBaseTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::ArrayTest::read_params( fs );
     if( code < 0 )
         return code;
 
-    max_aperture_size = cvReadInt( find_param( fs, "max_aperture_size" ), max_aperture_size );
+    read( find_param( fs, "max_aperture_size" ), max_aperture_size, max_aperture_size );
     max_aperture_size = cvtest::clipInt( max_aperture_size, 1, 100 );
 
     return code;
@@ -420,9 +420,9 @@ double CV_FilterTest::get_success_error_level( int /*test_case_idx*/, int /*i*/,
 
 void CV_FilterTest::run_func()
 {
-    CvMat kernel = test_mat[INPUT][1];
+    CvMat kernel = cvMat(test_mat[INPUT][1]);
     cvFilter2D( test_array[inplace ? OUTPUT : INPUT][0],
-                test_array[OUTPUT][0], &kernel, anchor );
+                test_array[OUTPUT][0], &kernel, cvPoint(anchor));
 }
 
 
@@ -1119,7 +1119,7 @@ void CV_PyramidBaseTest::get_test_array_types_and_sizes( int test_case_idx,
     const int depthes[] = {CV_8U, CV_16S, CV_16U, CV_32F};
 
     RNG& rng = ts->get_rng();
-    CvSize sz;
+    CvSize sz = {0, 0};
     CV_FilterBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
 
     int depth = depthes[cvtest::randInt(rng) % (sizeof(depthes)/sizeof(depthes[0]))];
@@ -1265,7 +1265,7 @@ public:
     CV_FeatureSelBaseTest( int width_factor );
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const FileStorage& fs );
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
     void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
     double get_success_error_level( int test_case_idx, int i, int j );
@@ -1289,15 +1289,15 @@ CV_FeatureSelBaseTest::CV_FeatureSelBaseTest( int _width_factor )
 }
 
 
-int CV_FeatureSelBaseTest::read_params( CvFileStorage* fs )
+int CV_FeatureSelBaseTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::BaseTest::read_params( fs );
     if( code < 0 )
         return code;
 
-    max_aperture_size = cvReadInt( find_param( fs, "max_aperture_size" ), max_aperture_size );
+    read( find_param( fs, "max_aperture_size" ), max_aperture_size, max_aperture_size );
     max_aperture_size = cvtest::clipInt( max_aperture_size, 1, 9 );
-    max_block_size = cvReadInt( find_param( fs, "max_block_size" ), max_block_size );
+    read( find_param( fs, "max_block_size" ), max_block_size, max_block_size );
     max_block_size = cvtest::clipInt( max_aperture_size, 1, 100 );
 
     return code;
@@ -2199,5 +2199,16 @@ TEST(Imgproc_Filter2D, dftFilter2d_regression_10683)
     }
 
     EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 2);
+}
+
+TEST(Imgproc_MedianBlur, hires_regression_13409)
+{
+    Mat src(2048, 2048, CV_8UC1), dst_hires, dst_ref;
+    randu(src, 0, 256);
+
+    medianBlur(src, dst_hires, 9);
+    medianBlur(src(Rect(512, 512, 1024, 1024)), dst_ref, 9);
+
+    ASSERT_EQ(0.0, cvtest::norm(dst_hires(Rect(516, 516, 1016, 1016)), dst_ref(Rect(4, 4, 1016, 1016)), NORM_INF));
 }
 }} // namespace
