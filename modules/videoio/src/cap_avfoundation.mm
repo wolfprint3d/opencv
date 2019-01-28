@@ -29,14 +29,12 @@
  *
  */
 
- #pragma clang diagnostic push
- #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-
 #include "precomp.hpp"
 #include "opencv2/imgproc.hpp"
 #include <iostream>
 #import <AVFoundation/AVFoundation.h>
 #import <Foundation/NSException.h>
+
 
 /********************** Declaration of class headers ************************/
 
@@ -1332,5 +1330,3 @@ bool CvVideoWriter_AVFoundation::writeFrame(const IplImage* iplimage) {
     }
 
 }
-
-#pragma clang diagnostic pop

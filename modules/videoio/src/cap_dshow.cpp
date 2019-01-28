@@ -96,7 +96,6 @@ Thanks to:
 #ifdef __MINGW32__
 // MinGW does not understand COM interfaces
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
-#define STRSAFE_NO_DEPRECATE
 #endif
 
 #include <tchar.h>
@@ -109,9 +108,9 @@ Thanks to:
 #include <vector>
 
 //Include Directshow stuff here so we don't worry about needing all the h files.
-#include "dshow.h"
+#include "DShow.h"
 #include "strmif.h"
-#include "aviriff.h"
+#include "Aviriff.h"
 #include "dvdmedia.h"
 #include "bdaiface.h"
 

@@ -303,9 +303,14 @@ public:
 //==================================================================================================
 
 static const VideoCaptureAPIs backend_params[] = {
-#ifdef HAVE_AVFOUNDATION
-   CAP_AVFOUNDATION,
+#ifdef HAVE_QUICKTIME
+    CAP_QT,
 #endif
+
+// TODO: Broken?
+//#ifdef HAVE_AVFOUNDATION
+//    CAP_AVFOUNDATION,
+//#endif
 
 #ifdef HAVE_MSMF
     CAP_MSMF,
@@ -328,6 +333,7 @@ static const VideoCaptureAPIs backend_params[] = {
 };
 
 static const string bunny_params[] = {
+#ifdef HAVE_VIDEO_INPUT
     string("wmv"),
     string("mov"),
     string("mp4"),
@@ -335,6 +341,7 @@ static const string bunny_params[] = {
     string("avi"),
     string("h264"),
     string("h265"),
+#endif
     string("mjpg.avi")
 };
 
@@ -377,16 +384,30 @@ static Ext_Fourcc_PSNR synthetic_params[] = {
     makeParam("mov", "H264", 30.f, CAP_MSMF),
 #endif
 
-#ifdef HAVE_AVFOUNDATION
-   makeParam("mov", "H264", 30.f, CAP_AVFOUNDATION),
-   makeParam("mov", "MJPG", 30.f, CAP_AVFOUNDATION),
-   makeParam("mp4", "H264", 30.f, CAP_AVFOUNDATION),
-   makeParam("mp4", "MJPG", 30.f, CAP_AVFOUNDATION),
-   makeParam("m4v", "H264", 30.f, CAP_AVFOUNDATION),
-   makeParam("m4v", "MJPG", 30.f, CAP_AVFOUNDATION),
-   makeParam("3gp", "H264", 30.f, CAP_AVFOUNDATION),
-   makeParam("3gp", "MJPG", 30.f, CAP_AVFOUNDATION),
+#ifdef HAVE_QUICKTIME
+    makeParam("mov", "mp4v", 30.f, CAP_QT),
+    makeParam("avi", "XVID", 30.f, CAP_QT),
+    makeParam("avi", "MPEG", 30.f, CAP_QT),
+    makeParam("avi", "IYUV", 30.f, CAP_QT),
+    makeParam("avi", "MJPG", 30.f, CAP_QT),
+
+    makeParam("mkv", "XVID", 30.f, CAP_QT),
+    makeParam("mkv", "MPEG", 30.f, CAP_QT),
+    makeParam("mkv", "MJPG", 30.f, CAP_QT),
 #endif
+
+// TODO: Broken?
+//#ifdef HAVE_AVFOUNDATION
+//    makeParam("mov", "mp4v", 30.f, CAP_AVFOUNDATION),
+//    makeParam("avi", "XVID", 30.f, CAP_AVFOUNDATION),
+//    makeParam("avi", "MPEG", 30.f, CAP_AVFOUNDATION),
+//    makeParam("avi", "IYUV", 30.f, CAP_AVFOUNDATION),
+//    makeParam("avi", "MJPG", 30.f, CAP_AVFOUNDATION),
+
+//    makeParam("mkv", "XVID", 30.f, CAP_AVFOUNDATION),
+//    makeParam("mkv", "MPEG", 30.f, CAP_AVFOUNDATION),
+//    makeParam("mkv", "MJPG", 30.f, CAP_AVFOUNDATION),
+//#endif
 
 #ifdef HAVE_FFMPEG
     makeParam("avi", "XVID", 30.f, CAP_FFMPEG),

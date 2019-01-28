@@ -157,7 +157,8 @@ PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v2_TensorFlow)
 
 PERF_TEST_P_(DNNTestNetwork, DenseNet_121)
 {
-    if (backend == DNN_BACKEND_HALIDE)
+    if (backend == DNN_BACKEND_HALIDE ||
+        (backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)))
         throw SkipTestException("");
     processNet("dnn/DenseNet_121.caffemodel", "dnn/DenseNet_121.prototxt", "",
                Mat(cv::Size(224, 224), CV_32FC3));
@@ -210,7 +211,8 @@ PERF_TEST_P_(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
 
 PERF_TEST_P_(DNNTestNetwork, YOLOv3)
 {
-    if (backend == DNN_BACKEND_HALIDE)
+    if (backend == DNN_BACKEND_HALIDE ||
+        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
     Mat sample = imread(findDataFile("dnn/dog416.png", false));
     Mat inp;
@@ -220,11 +222,8 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv3)
 
 PERF_TEST_P_(DNNTestNetwork, EAST_text_detection)
 {
-    if (backend == DNN_BACKEND_HALIDE
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
-        || (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-#endif
-    )
+    if (backend == DNN_BACKEND_HALIDE ||
+        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
     processNet("dnn/frozen_east_text_detection.pb", "", "", Mat(cv::Size(320, 320), CV_32FC3));
 }

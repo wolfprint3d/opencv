@@ -103,7 +103,7 @@ void OpBase::createShaderModule(const uint32_t* spv, size_t sz, const std::strin
     VK_CHECK_RESULT(vkCreateShaderModule(device_, &create_info, NULL, &module_));
 }
 
-void OpBase::createPipeline(size_t push_constants_size, VkSpecializationInfo* specialization_info)
+void OpBase::createPipeline(size_t push_constants_size)
 {
     // create pipeline
     VkPipelineShaderStageCreateInfo stage_create_info = {};
@@ -111,7 +111,6 @@ void OpBase::createPipeline(size_t push_constants_size, VkSpecializationInfo* sp
     stage_create_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
     stage_create_info.module = module_;
     stage_create_info.pName = "main";
-    stage_create_info.pSpecializationInfo = specialization_info;
     VkPushConstantRange push_constant_ranges[1] = {};
     push_constant_ranges[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
     push_constant_ranges[0].offset = 0;

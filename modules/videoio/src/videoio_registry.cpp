@@ -8,6 +8,7 @@
 
 #include "opencv2/videoio/registry.hpp"
 
+#include "cap_intelperc.hpp"
 #include "cap_librealsense.hpp"
 #include "cap_dshow.hpp"
 
@@ -44,7 +45,7 @@ namespace {
 /** Ordering guidelines:
 - modern optimized, multi-platform libraries: ffmpeg, gstreamer, Media SDK
 - platform specific universal SDK: WINRT, AVFOUNDATION, MSMF/DSHOW, V4L/V4L2
-- RGB-D: OpenNI/OpenNI2, REALSENSE
+- RGB-D: OpenNI/OpenNI2, INTELPERC/REALSENSE
 - special OpenCV (file-based): "images", "mjpeg"
 - special camera SDKs, including stereo: other special SDKs: FIREWIRE/1394, XIMEA/ARAVIS/GIGANETIX/PVAPI(GigE)
 - other: XINE, gphoto2, etc
@@ -87,12 +88,16 @@ static const struct VideoBackendInfo builtin_backends[] =
 
 
     // RGB-D universal
+#ifdef HAVE_OPENNI
+    DECLARE_BACKEND(CAP_OPENNI, "OPENNI", MODE_CAPTURE_ALL),
+#endif
 #ifdef HAVE_OPENNI2
     DECLARE_BACKEND(CAP_OPENNI2, "OPENNI2", MODE_CAPTURE_ALL),
 #endif
-
-#ifdef HAVE_LIBREALSENSE
-    DECLARE_BACKEND(CAP_REALSENSE, "INTEL_REALSENSE", MODE_CAPTURE_BY_INDEX),
+#ifdef HAVE_INTELPERC
+    DECLARE_BACKEND(CAP_INTELPERC, "INTEL_PERC", MODE_CAPTURE_BY_INDEX),
+#elif defined(HAVE_LIBREALSENSE)
+    DECLARE_BACKEND(CAP_INTELPERC, "INTEL_REALSENSE", MODE_CAPTURE_BY_INDEX),
 #endif
 
     // OpenCV file-based only
@@ -109,6 +114,9 @@ static const struct VideoBackendInfo builtin_backends[] =
 #endif
 #ifdef HAVE_XIMEA
     DECLARE_BACKEND(CAP_XIAPI, "XIMEA", MODE_CAPTURE_ALL),
+#endif
+#ifdef HAVE_GIGE_API
+    DECLARE_BACKEND(CAP_GIGANETIX, "GIGANETIX", MODE_CAPTURE_BY_INDEX),
 #endif
 #ifdef HAVE_ARAVIS_API
     DECLARE_BACKEND(CAP_ARAVIS, "ARAVIS", MODE_CAPTURE_BY_INDEX),
@@ -407,8 +415,12 @@ void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCap
         TRY_OPEN(makePtr<VideoCapture_DShow>(index));
         break;
 #endif
-#ifdef HAVE_LIBREALSENSE
-    case CAP_REALSENSE:
+#ifdef HAVE_INTELPERC
+    case CAP_INTELPERC:
+        TRY_OPEN(makePtr<VideoCapture_IntelPerC>());
+        break;
+#elif defined(HAVE_LIBREALSENSE)
+    case CAP_INTELPERC:
         TRY_OPEN(makePtr<VideoCapture_LibRealsense>(index));
         break;
 #endif
@@ -442,6 +454,11 @@ void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCap
         TRY_OPEN_LEGACY(cvCreateCameraCapture_PvAPI(index))
         break;
 #endif
+#ifdef HAVE_OPENNI
+    case CAP_OPENNI:
+        TRY_OPEN_LEGACY(cvCreateCameraCapture_OpenNI(index))
+        break;
+#endif
 #ifdef HAVE_OPENNI2
     case CAP_OPENNI2:
         TRY_OPEN_LEGACY(cvCreateCameraCapture_OpenNI2(index))
@@ -456,6 +473,12 @@ void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCap
 #ifdef HAVE_AVFOUNDATION
     case CAP_AVFOUNDATION:
         TRY_OPEN_LEGACY(cvCreateCameraCapture_AVFoundation(index))
+        break;
+#endif
+
+#ifdef HAVE_GIGE_API
+    case CAP_GIGANETIX:
+        TRY_OPEN_LEGACY(cvCreateCameraCapture_Giganetix(index))
         break;
 #endif
 
@@ -484,6 +507,12 @@ void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCap
 #ifdef HAVE_AVFOUNDATION
     case CAP_AVFOUNDATION:
         TRY_OPEN_LEGACY(cvCreateFileCapture_AVFoundation(filename.c_str()))
+        break;
+#endif
+
+#ifdef HAVE_OPENNI
+    case CAP_OPENNI:
+        TRY_OPEN_LEGACY(cvCreateFileCapture_OpenNI(filename.c_str()))
         break;
 #endif
 

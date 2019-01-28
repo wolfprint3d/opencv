@@ -137,8 +137,7 @@ private:
         backends.push_back(std::make_pair(DNN_BACKEND_OPENCV, DNN_TARGET_CPU));
 
 #ifdef HAVE_VULKAN
-        if (haveVulkan())
-            backends.push_back(std::make_pair(DNN_BACKEND_VKCOM, DNN_TARGET_VULKAN));
+        backends.push_back(std::make_pair(DNN_BACKEND_VKCOM, DNN_TARGET_VULKAN));  // TODO Add device check
 #endif
     }
     static inline bool checkIETarget(int target)
@@ -707,6 +706,12 @@ struct DataLayer : public Layer
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "ScaleShift";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::ScaleShiftLayer> ieLayer(new InferenceEngine::ScaleShiftLayer(lp));
+
         CV_CheckEQ(inputsData.size(), (size_t)1, "");
         CV_CheckEQ(inputsData[0].dims, 4, "");
         const size_t numChannels = inputsData[0].size[1];
@@ -717,6 +722,7 @@ struct DataLayer : public Layer
                                                                 {numChannels});
         weights->allocate();
         weights->set(std::vector<float>(numChannels, scaleFactors[0]));
+        ieLayer->_weights = weights;
 
         // Mean subtraction
         auto biases = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
@@ -728,21 +734,8 @@ struct DataLayer : public Layer
             biasesVec[i] = -means[0][i] * scaleFactors[0];
         }
         biases->set(biasesVec);
-
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
-        InferenceEngine::Builder::ScaleShiftLayer ieLayer(name);
-        ieLayer.setWeights(weights);
-        ieLayer.setBiases(biases);
-#else
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "ScaleShift";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::ScaleShiftLayer> ieLayer(new InferenceEngine::ScaleShiftLayer(lp));
-
-        ieLayer->_weights = weights;
         ieLayer->_biases = biases;
-#endif
+
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
 #endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
@@ -1486,11 +1479,7 @@ struct Net::Impl
                 if (layerNet != ieInpNode->net)
                 {
                     // layerNet is empty or nodes are from different graphs.
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
-                    ieInpNode->net->addOutput(ieInpNode->layer.getName());
-#else
                     ieInpNode->net->addOutput(ieInpNode->layer->name);
-#endif
                 }
             }
         }
@@ -1513,6 +1502,32 @@ struct Net::Impl
             if (!layer->supportBackend(preferableBackend))
             {
                 continue;
+            }
+
+            if (ld.type == "Convolution")
+            {
+                std::vector<MatShape> in_shapes;
+                std::vector<MatShape> out_shapes;
+                CV_Assert(ld.inputBlobs.size() == ld.outputBlobs.size());
+
+                for (int i = 0; i < ld.inputBlobs.size(); i++)
+                {
+                    in_shapes.push_back(shape(*ld.inputBlobs[i]));
+                    out_shapes.push_back(shape(ld.outputBlobs[i]));
+                }
+                int64 flops = layer->getFLOPS(in_shapes, out_shapes);
+                // FIXME
+                //
+                // This is a workaround for GPU hang on heavy convolution workload ( > 10 GFLOPS).
+                // For the long time task, vkWaitForFences() return without error but next call on
+                // vkQueueSubmit() return -4, i.e. "VK_ERROR_DEVICE_LOST" and driver reports GPU hang.
+                //
+                // Need more investigation on root cause of GPU hang and need to optimize convolution shader
+                // to reduce process time.
+                if (flops > CV_BIG_INT(10) * 1000 * 1000 * 1000)
+                {
+                    continue;
+                }
             }
 
             ld.skip = false;
@@ -1600,7 +1615,7 @@ struct Net::Impl
 
         // Build Inference Engine networks from sets of layers that support this
         // backend. Split a whole model on several Inference Engine networks if
-        // some of layers are not implemented.
+        // some of layers is not implemented.
 
         // Set of all input and output blobs wrappers for current network.
         std::map<LayerPin, Ptr<BackendWrapper> > netBlobsWrappers;
@@ -1616,7 +1631,7 @@ struct Net::Impl
             {
                 addInfEngineNetOutputs(ld);
                 net = Ptr<InfEngineBackendNet>();
-                netBlobsWrappers.clear();  // Is not used for R5 release but we don't wrap it to #ifdef.
+                netBlobsWrappers.clear();
                 layer->preferableTarget = DNN_TARGET_CPU;
                 continue;
             }
@@ -1634,13 +1649,12 @@ struct Net::Impl
                     if (ieInpNode->net != net)
                     {
                         net = Ptr<InfEngineBackendNet>();
-                        netBlobsWrappers.clear();  // Is not used for R5 release but we don't wrap it to #ifdef.
+                        netBlobsWrappers.clear();
                         break;
                     }
                 }
             }
 
-#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2018R5)
             // The same blobs wrappers cannot be shared between two Inference Engine
             // networks because of explicit references between layers and blobs.
             // So we need to rewrap all the external blobs.
@@ -1657,7 +1671,6 @@ struct Net::Impl
                     ld.inputBlobsWrappers[i] = it->second;
             }
             netBlobsWrappers[LayerPin(ld.id, 0)] = ld.outputBlobsWrappers[0];
-#endif  // IE < R5
 
             Ptr<BackendNode> node;
             if (!net.empty())
@@ -1687,40 +1700,6 @@ struct Net::Impl
             Ptr<InfEngineBackendNode> ieNode = node.dynamicCast<InfEngineBackendNode>();
             CV_Assert(!ieNode.empty());
             ieNode->net = net;
-
-            // Convert weights in FP16 for specific targets.
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
-            if ((preferableTarget == DNN_TARGET_OPENCL_FP16 ||
-                 preferableTarget == DNN_TARGET_MYRIAD ||
-                 preferableTarget == DNN_TARGET_FPGA) && !fused)
-            {
-                auto& blobs = ieNode->layer.getConstantData();
-                if (blobs.empty())
-                {
-                    // In case of non weightable layer we have to specify
-                    // it's precision adding dummy blob.
-                    auto blob = InferenceEngine::make_shared_blob<int16_t>(
-                                    InferenceEngine::Precision::FP16,
-                                    InferenceEngine::Layout::C, {1});
-                    blob->allocate();
-                    blobs[""] = blob;
-                }
-                else
-                {
-                    for (auto& it : blobs)
-                        it.second = convertFp16(std::const_pointer_cast<InferenceEngine::Blob>(it.second));
-                }
-            }
-
-            if (!fused)
-                net->addLayer(ieNode->layer);
-
-            net->connect(ld.inputBlobsWrappers, ld.outputBlobsWrappers, ieNode->layer.getName());
-            net->addBlobs(ld.inputBlobsWrappers);
-            net->addBlobs(ld.outputBlobsWrappers);
-            addInfEngineNetOutputs(ld);
-
-#else  // IE >= R5
 
             auto weightableLayer = std::dynamic_pointer_cast<InferenceEngine::WeightableLayer>(ieNode->layer);
             if ((preferableTarget == DNN_TARGET_OPENCL_FP16 ||
@@ -1759,10 +1738,10 @@ struct Net::Impl
             if (!fused)
                 net->addLayer(ieNode->layer);
             addInfEngineNetOutputs(ld);
-#endif  // IE >= R5
         }
 
         // Initialize all networks.
+        std::set<InfEngineBackendNet> initializedNets;
         for (MapIdToLayerData::reverse_iterator it = layers.rbegin(); it != layers.rend(); ++it)
         {
             LayerData &ld = it->second;
@@ -2668,11 +2647,7 @@ Net Net::readFromModelOptimizer(const String& xml, const String& bin)
     Net cvNet;
     cvNet.setInputsNames(inputsNames);
 
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
-    Ptr<InfEngineBackendNode> backendNode(new InfEngineBackendNode(InferenceEngine::Builder::Layer("")));
-#else
     Ptr<InfEngineBackendNode> backendNode(new InfEngineBackendNode(0));
-#endif
     backendNode->net = Ptr<InfEngineBackendNet>(new InfEngineBackendNet(ieNet));
     for (auto& it : ieNet.getOutputsInfo())
     {

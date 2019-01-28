@@ -194,8 +194,9 @@ bool cv::find4QuadCornerSubpix(InputArray _img, InputOutputArray _corners, Size 
         erode(white_comp, white_comp, Mat(), Point(-1, -1), erode_count);
 
         std::vector<std::vector<Point> > white_contours, black_contours;
-        findContours(black_comp, black_contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
-        findContours(white_comp, white_contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
+        std::vector<Vec4i> white_hierarchy, black_hierarchy;
+        findContours(black_comp, black_contours, black_hierarchy, RETR_LIST, CHAIN_APPROX_SIMPLE);
+        findContours(white_comp, white_contours, white_hierarchy, RETR_LIST, CHAIN_APPROX_SIMPLE);
 
         if(black_contours.size() < 5 || white_contours.size() < 5) continue;
 

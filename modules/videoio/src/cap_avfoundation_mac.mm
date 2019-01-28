@@ -39,8 +39,6 @@
 //
 //M*////////////////////////////////////////////////////////////////////////////////////////
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 #include "precomp.hpp"
 #include "opencv2/imgproc.hpp"
@@ -800,7 +798,9 @@ bool CvCaptureFile::setupReadingAt(CMTime position) {
     mFrameTimestamp = position;
     mFrameNum = round((mFrameTimestamp.value * mAssetTrack.nominalFrameRate) / double(mFrameTimestamp.timescale));
     [mAssetReader addOutput: mTrackOutput];
-    return [mAssetReader startReading];
+    [mAssetReader startReading];
+
+    return true;
 }
 
 int CvCaptureFile::didStart() {
@@ -1018,7 +1018,7 @@ double CvCaptureFile::getProperty(int property_id) const{
         case CV_CAP_PROP_POS_MSEC:
             return mFrameTimestamp.value * 1000.0 / mFrameTimestamp.timescale;
         case CV_CAP_PROP_POS_FRAMES:
-            return mAssetTrack.nominalFrameRate > 0 ? mFrameNum : 0;
+            return  mFrameNum;
         case CV_CAP_PROP_POS_AVI_RATIO:
             t = [mAsset duration];
             return (mFrameTimestamp.value * t.timescale) / double(mFrameTimestamp.timescale * t.value);
@@ -1054,15 +1054,18 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
         case CV_CAP_PROP_POS_MSEC:
             t = mAsset.duration;
             t.value = value * t.timescale / 1000;
-            retval = setupReadingAt(t);
+            setupReadingAt(t);
+            retval = true;
             break;
         case CV_CAP_PROP_POS_FRAMES:
-            retval = mAssetTrack.nominalFrameRate > 0 ? setupReadingAt(CMTimeMake(value, mAssetTrack.nominalFrameRate)) : false;
+            setupReadingAt(CMTimeMake(value, mAssetTrack.nominalFrameRate));
+            retval = true;
             break;
         case CV_CAP_PROP_POS_AVI_RATIO:
             t = mAsset.duration;
             t.value = round(t.value * value);
-            retval = setupReadingAt(t);
+            setupReadingAt(t);
+            retval = true;
             break;
         case CV_CAP_PROP_FOURCC:
             uint32_t mode;
@@ -1076,7 +1079,8 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
                     case CV_CAP_MODE_GRAY:
                     case CV_CAP_MODE_YUYV:
                         mMode = mode;
-                        retval = setupReadingAt(mFrameTimestamp);
+                        setupReadingAt(mFrameTimestamp);
+                        retval = true;
                         break;
                     default:
                         fprintf(stderr, "VIDEOIO ERROR: AVF Mac: Unsupported mode: %d\n", mode);
@@ -1329,5 +1333,3 @@ bool CvVideoWriter_AVFoundation::writeFrame(const IplImage* iplimage) {
     }
 
 }
-
-#pragma clang diagnostic pop
